@@ -312,21 +312,32 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
   options: GenerateStructuredOptions<TOutput>
 ): Promise<TOutput> {
   const model = getGeminiModel();
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
+  const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)?.trim();
 
-  if (!apiKey) {
+  if (!useVertex && !apiKey) {
     return options.fallback(
       createMetadata(
         options.role,
         'mock',
         model,
-        'GEMINI_API_KEY is not configured.'
+        'AI provider not configured (missing Vertex AI or API key).'
       )
     );
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    let ai: GoogleGenAI;
+    if (useVertex) {
+      const project = process.env.GOOGLE_CLOUD_PROJECT;
+      const location = process.env.GOOGLE_CLOUD_LOCATION || 'global';
+      if (!project) {
+        throw new Error('GOOGLE_CLOUD_PROJECT is required for Vertex AI.');
+      }
+      ai = new GoogleGenAI({ vertexai: true, project, location });
+    } else {
+      ai = new GoogleGenAI({ apiKey });
+    }
     const response = await ai.models.generateContent({
       model,
       contents: options.prompt,
