@@ -7,3 +7,6 @@ coverage/
 !.env.example
 .vercel
 .env*.local
+
+# Supabase local temp files
+supabase/.temp/
