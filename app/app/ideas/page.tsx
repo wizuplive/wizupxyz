@@ -1,174 +1,334 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { Search, SlidersHorizontal, ArrowUpRight } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import React, { useState, useTransition } from 'react';
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Lightbulb,
+  Search,
+  SlidersHorizontal,
+} from 'lucide-react';
 
-const MOCK_IDEAS = [
-  {
-    id: 1,
-    name: 'Minimalist ADHD Planner',
-    buyer: 'Adults with ADHD',
-    format: 'Printable template',
-    price: '$15 - $25',
-    score: 92,
-    difficulty: 'Easy',
-    verdict: 'Build now',
-    verdictColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-  },
-  {
-    id: 2,
-    name: 'Canva Social Media Kit',
-    buyer: 'Local businesses',
-    format: 'Template pack',
-    price: '$29 - $49',
-    score: 84,
-    difficulty: 'Medium',
-    verdict: 'Build now',
-    verdictColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-  },
-  {
-    id: 3,
-    name: 'Fitness tracker spreadsheet',
-    buyer: 'Gym beginners',
-    format: 'Spreadsheet',
-    price: '$5 - $10',
-    score: 61,
-    difficulty: 'Medium',
-    verdict: 'Refine first',
-    verdictColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20'
-  },
-  {
-    id: 4,
-    name: 'Complete coding bootcamp',
-    buyer: 'Junior devs',
-    format: 'Video course',
-    price: '$199+',
-    score: 45,
-    difficulty: 'Hard',
-    verdict: 'Skip',
-    verdictColor: 'text-red-500 bg-red-500/10 border-red-500/20'
-  }
+import { scoutTopic, saveScoutIdea } from '@/app/actions/workflow';
+import type { ScoutIdeasOutput, ScoutOpportunity } from '@/lib/ai';
+import { AiSourceBadge, InlineSpinner, WorkflowNotice } from '@/components/workflow/workflow-panels';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+
+const starterTopics = [
+  'ADHD planning',
+  'local business marketing',
+  'new parent routines',
+  'freelance client systems',
 ];
 
 export default function IdeasPage() {
+  const [topic, setTopic] = useState('');
+  const [scan, setScan] = useState<ScoutIdeasOutput | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [savedIdeaIds, setSavedIdeaIds] = useState<Set<string>>(new Set());
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [isScanning, startScanTransition] = useTransition();
+  const [isSaving, startSaveTransition] = useTransition();
+
+  function handleScan(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setNotice(null);
+    setSaveMessage(null);
+
+    startScanTransition(async () => {
+      const result = await scoutTopic(topic);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      setScan(result.data);
+      setNotice(result.notice);
+      setSavedIdeaIds(new Set());
+    });
+  }
+
+  function handleStarterTopic(value: string) {
+    setTopic(value);
+  }
+
+  function handleSaveIdea(idea: ScoutOpportunity) {
+    if (!scan) {
+      return;
+    }
+
+    setError(null);
+    setSaveMessage(null);
+    setSavingId(idea.id);
+
+    startSaveTransition(async () => {
+      const result = await saveScoutIdea(idea, scan);
+
+      if (result.error) {
+        setError(result.error);
+        setSavingId(null);
+        return;
+      }
+
+      setSavedIdeaIds((current) => {
+        const next = new Set(current);
+        next.add(idea.id);
+        return next;
+      });
+      setSaveMessage(`${idea.title} saved to your workspace.`);
+      setSavingId(null);
+    });
+  }
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto h-full flex flex-col pb-24 lg:pb-8">
+    <div className="mx-auto flex h-full max-w-7xl flex-col p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
       <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-medium text-white mb-2">Find product ideas people want</h1>
-        <p className="text-muted-foreground text-base lg:text-lg">Search a niche, audience, or problem. WIZUP will score the best opportunities.</p>
+        <h1 className="mb-2 text-2xl font-medium text-white sm:text-3xl">
+          Find product ideas people want
+        </h1>
+        <p className="text-base text-muted-foreground lg:text-lg">
+          Search a niche, audience, or problem. Scout will score practical digital product opportunities.
+        </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 mb-6 lg:mb-8">
+      <form
+        onSubmit={handleScan}
+        className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row"
+      >
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input 
-            placeholder="Search a niche, problem, or audience..." 
-            className="pl-12 h-12 lg:h-14 text-base lg:text-lg bg-card border-white/10 rounded-xl w-full"
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={topic}
+            onChange={(event) => setTopic(event.target.value)}
+            placeholder="Search a niche, problem, or audience..."
+            className="h-12 w-full rounded-xl border-white/10 bg-card pl-12 text-base lg:h-14 lg:text-lg"
           />
         </div>
         <div className="flex gap-3">
-          <Button size="lg" variant="outline" className="h-12 lg:h-14 px-4 lg:px-6 border-white/10 bg-card hover:bg-white/5 shrink-0 gap-2 flex-1 sm:flex-none">
-            <SlidersHorizontal className="w-5 h-5" />
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-12 flex-1 gap-2 border-white/10 bg-card px-4 hover:bg-white/5 sm:flex-none lg:h-14 lg:px-6"
+          >
+            <SlidersHorizontal className="h-5 w-5" />
             <span className="hidden sm:inline">Filters</span>
           </Button>
-          <Button size="lg" className="h-12 lg:h-14 px-6 lg:px-8 shrink-0 flex-1 sm:flex-none">
-            Scan Market
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isScanning}
+            className="h-12 flex-1 px-6 font-semibold sm:flex-none lg:h-14 lg:px-8"
+          >
+            {isScanning ? <InlineSpinner label="Scanning" /> : 'Scan Market'}
           </Button>
         </div>
-      </div>
+      </form>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-        <Badge variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10 px-3 py-1 cursor-pointer shrink-0">Market: All</Badge>
-        <Badge variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10 px-3 py-1 cursor-pointer shrink-0">Product type: All</Badge>
-        <Badge variant="outline" className="bg-white/5 border-white/10 hover:bg-white/10 px-3 py-1 cursor-pointer shrink-0">Score: 80+</Badge>
-      </div>
-
-      {/* Desktop Table (hidden on mobile) */}
-      <div className="hidden lg:flex flex-col rounded-xl border border-white/5 bg-card overflow-hidden flex-1">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-white/5 text-sm font-medium text-muted-foreground bg-white/[0.02]">
-          <div className="col-span-3">Idea</div>
-          <div className="col-span-2">Buyer</div>
-          <div className="col-span-2">Best format</div>
-          <div className="col-span-2">Price</div>
-          <div className="col-span-1 text-center">Score</div>
-          <div className="col-span-2 text-right">Next step</div>
-        </div>
-
-        <div className="divide-y divide-white/5">
-          {MOCK_IDEAS.map((idea) => (
-            <Link 
-              key={idea.id} 
-              href={`/app/ideas/${idea.id}`}
-              className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-white/[0.02] transition-colors group"
-            >
-              <div className="col-span-3 font-medium text-white group-hover:text-primary transition-colors flex items-center gap-2">
-                {idea.name}
-                <ArrowUpRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="col-span-2 text-muted-foreground text-sm">{idea.buyer}</div>
-              <div className="col-span-2 text-muted-foreground text-sm">{idea.format}</div>
-              <div className="col-span-2 text-muted-foreground text-sm">{idea.price}</div>
-              <div className="col-span-1 flex justify-center">
-                <span className={`font-medium ${idea.score >= 80 ? 'text-amber-500' : 'text-white'}`}>
-                  {idea.score}
-                </span>
-              </div>
-              <div className="col-span-2 flex justify-end">
-                <Badge variant="outline" className={`px-2.5 py-0.5 rounded-full border ${idea.verdictColor}`}>
-                  {idea.verdict}
-                </Badge>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Mobile Idea Cards (hidden on lg) */}
-      <div className="flex flex-col gap-4 lg:hidden">
-        {MOCK_IDEAS.map((idea) => (
-          <Link 
-            key={idea.id} 
-            href={`/app/ideas/${idea.id}`}
-            className="flex flex-col bg-card border border-white/5 rounded-xl p-4 sm:p-5 hover:border-white/10 transition-colors gap-4"
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+        {starterTopics.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => handleStarterTopic(value)}
+            className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white"
           >
-            <div className="flex justify-between items-start gap-4">
-              <h3 className="font-medium text-white text-base leading-tight">{idea.name}</h3>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-white/5 shrink-0`}>
-                <span className={`text-xs font-bold ${idea.score >= 80 ? 'text-amber-500' : 'text-white'}`}>{idea.score}</span>
-              </div>
-            </div>
-            
-            <div className="space-y-1.5 flex-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-white/40">Buyer</span>
-                <span className="text-white/80 font-medium text-right">{idea.buyer}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/40">Format</span>
-                <span className="text-white/80 font-medium text-right">{idea.format}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/40">Price</span>
-                <span className="text-white/80 font-medium text-right">{idea.price}</span>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-white/5 flex items-center justify-between mt-auto">
-              <Badge variant="outline" className={`px-2.5 py-1 rounded-full border text-[11px] ${idea.verdictColor}`}>
-                {idea.verdict}
-              </Badge>
-              <div className="text-primary text-xs font-medium flex items-center gap-1 group-hover:gap-1.5 transition-all">
-                Details <ArrowUpRight className="w-3.5 h-3.5" />
-              </div>
-            </div>
-          </Link>
+            {value}
+          </button>
         ))}
       </div>
+
+      <div className="mb-5 space-y-3">
+        {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}
+        {notice ? <WorkflowNotice>{notice}</WorkflowNotice> : null}
+        {saveMessage ? (
+          <WorkflowNotice tone="success">{saveMessage}</WorkflowNotice>
+        ) : null}
+      </div>
+
+      {!scan ? (
+        <Card className="flex-1 justify-center border-white/5 bg-card p-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Lightbulb className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="mb-2 text-lg font-medium text-white">
+            Run a Scout scan to fill this workspace
+          </h2>
+          <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
+            Generated ideas will appear here with buyer, format, price, score, risk, and a save action for the next workflow step.
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 rounded-xl border border-white/5 bg-card p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-primary/20 bg-primary/10 text-primary"
+                >
+                  Scout
+                </Badge>
+                <AiSourceBadge
+                  source={scan.source}
+                  fallbackReason={scan.fallbackReason}
+                />
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {scan.summary}
+              </p>
+            </div>
+            <div className="min-w-0 shrink-0 text-left sm:w-64">
+              <p className="mb-2 text-[10px] uppercase tracking-widest text-white/40">
+                Next searches
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {scan.nextSearches.slice(0, 3).map((search) => (
+                  <Badge
+                    key={search}
+                    variant="outline"
+                    className="border-white/10 bg-white/5 text-white/70"
+                  >
+                    {search}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {scan.ideas.map((idea) => {
+              const isSaved = savedIdeaIds.has(idea.id);
+              const isSavingThis = isSaving && savingId === idea.id;
+
+              return (
+                <Card
+                  key={idea.id}
+                  className="border-white/5 bg-card p-4 transition-colors hover:border-white/10 sm:p-5"
+                >
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={verdictClassName(idea.verdict)}
+                        >
+                          {idea.verdict}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-white/10 bg-white/5 text-white/60"
+                        >
+                          {idea.difficulty}
+                        </Badge>
+                      </div>
+                      <h2 className="text-lg font-medium leading-tight text-white">
+                        {idea.title}
+                      </h2>
+                    </div>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10">
+                      <span className="text-sm font-bold text-amber-300">
+                        {idea.opportunityScore}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                    <Metric label="Buyer" value={idea.buyer} />
+                    <Metric label="Format" value={idea.format} />
+                    <Metric label="Price" value={idea.priceRange} />
+                  </div>
+
+                  <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+                    {idea.problem}
+                  </p>
+
+                  <div className="mb-4 grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                      <p className="mb-2 text-[10px] uppercase tracking-widest text-white/40">
+                        Why now
+                      </p>
+                      <p className="text-xs leading-relaxed text-white/70">
+                        {idea.whyNow}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                      <p className="mb-2 text-[10px] uppercase tracking-widest text-white/40">
+                        Next step
+                      </p>
+                      <p className="text-xs leading-relaxed text-white/70">
+                        {idea.nextStep}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-5 space-y-2">
+                    {idea.evidence.slice(0, 2).map((item) => (
+                      <div key={item} className="flex gap-2 text-xs text-white/65">
+                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-3 border-t border-white/5 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-xs text-white/40">
+                      Save the idea to unlock Analyst.
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={isSaved || isSavingThis}
+                      onClick={() => handleSaveIdea(idea)}
+                      className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      {isSavingThis ? (
+                        <InlineSpinner label="Saving" />
+                      ) : isSaved ? (
+                        'Saved'
+                      ) : (
+                        <>
+                          Save Idea
+                          <ArrowUpRight className="h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+      <p className="mb-1 text-[10px] uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="text-sm font-medium leading-tight text-white/85">{value}</p>
+    </div>
+  );
+}
+
+function verdictClassName(verdict: ScoutOpportunity['verdict']) {
+  if (verdict === 'Build now') {
+    return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300';
+  }
+
+  if (verdict === 'Refine first') {
+    return 'border-amber-500/20 bg-amber-500/10 text-amber-300';
+  }
+
+  return 'border-red-500/20 bg-red-500/10 text-red-300';
 }

@@ -1,177 +1,442 @@
 'use client';
 
-import React from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Bot, Settings, Wand2, FileText, CheckSquare, ListPlus, Link2, Download, Save
+import React, { useEffect, useMemo, useState, useTransition } from 'react';
+import Link from 'next/link';
+import {
+  Bot,
+  CheckCircle2,
+  Download,
+  FileText,
+  Hammer,
+  Layers,
+  Lightbulb,
+  Save,
+  Sparkles,
 } from 'lucide-react';
 
+import {
+  generateProductArchitecture,
+  listProductSources,
+  saveProductArchitecture,
+  type ProductSourceOption,
+} from '@/app/actions/workflow';
+import type { StrategistProductOutlineOutput } from '@/lib/ai';
+import {
+  AiSourceBadge,
+  EmptyWorkflowState,
+  InlineSpinner,
+  WorkflowNotice,
+} from '@/components/workflow/workflow-panels';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 export default function ProductPage() {
+  const [sources, setSources] = useState<ProductSourceOption[]>([]);
+  const [selectedSourceKey, setSelectedSourceKey] = useState('');
+  const [product, setProduct] =
+    useState<StrategistProductOutlineOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isGenerating, startGenerateTransition] = useTransition();
+  const [isSaving, startSaveTransition] = useTransition();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSources() {
+      const result = await listProductSources();
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (result.error) {
+        setError(result.error);
+      } else {
+        const options = result.data ?? [];
+        setSources(options);
+        setSelectedSourceKey((current) => current || options[0]?.key || '');
+      }
+
+      setIsLoading(false);
+    }
+
+    loadSources();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedSource = useMemo(
+    () => sources.find((source) => source.key === selectedSourceKey) ?? null,
+    [sources, selectedSourceKey]
+  );
+
+  function handleGenerate() {
+    if (!selectedSourceKey) {
+      setError('Select a saved idea or example first.');
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setSaveMessage(null);
+
+    startGenerateTransition(async () => {
+      const result = await generateProductArchitecture(selectedSourceKey);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      setProduct(result.data);
+      setNotice(result.notice);
+    });
+  }
+
+  function handleSave() {
+    if (!product) {
+      return;
+    }
+
+    setError(null);
+    setSaveMessage(null);
+
+    startSaveTransition(async () => {
+      const result = await saveProductArchitecture(selectedSourceKey, product);
+
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      setSaveMessage('Product architecture saved to your workspace.');
+    });
+  }
+
   return (
-    <div className="flex h-[calc(100vh-theme(spacing.16))] lg:h-screen">
-      {/* Editor Section */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 relative pb-24 lg:pb-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex min-h-full flex-col lg:flex-row">
+      <div className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center lg:mb-8">
             <div>
-              <h1 className="text-2xl lg:text-3xl font-medium text-white mb-1 lg:mb-2">Build your product</h1>
-              <p className="text-sm lg:text-base text-muted-foreground">Turn your idea into a clear product draft.</p>
+              <h1 className="mb-1 text-2xl font-medium text-white lg:mb-2 lg:text-3xl">
+                Build your product
+              </h1>
+              <p className="text-sm text-muted-foreground lg:text-base">
+                Strategist turns saved research into modules, pacing, pricing, and a build plan.
+              </p>
             </div>
-            <Button variant="outline" className="w-full sm:w-auto border-white/10 text-white hover:bg-white/5">
-              <Download className="w-4 h-4 mr-2" />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full border-white/10 text-white hover:bg-white/5 sm:w-auto"
+            >
+              <Download className="h-4 w-4" />
               Export
             </Button>
           </div>
 
-          <form className="space-y-6 lg:space-y-8">
-            <Card className="p-4 sm:p-6 bg-card border-white/5">
-              <h2 className="text-lg lg:text-xl font-medium text-white mb-4 lg:mb-6">Product basics</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs lg:text-sm font-medium text-muted-foreground mb-1 block">Title</label>
-                  <Input defaultValue="The Anti-Overwhelm Daily Planner" className="bg-white/[0.02] border-white/10" />
-                </div>
-                <div>
-                  <label className="text-xs lg:text-sm font-medium text-muted-foreground mb-1 block">Subtitle</label>
-                  <Input defaultValue="A minimal system for neurodivergent brains to get things done." className="bg-white/[0.02] border-white/10" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs lg:text-sm font-medium text-muted-foreground mb-1 block">Product Type</label>
-                    <Input defaultValue="Printable PDF" className="bg-white/[0.02] border-white/10" />
-                  </div>
-                  <div>
-                    <label className="text-xs lg:text-sm font-medium text-muted-foreground mb-1 block">Price</label>
-                    <Input defaultValue="$15 - $25" className="bg-white/[0.02] border-white/10" />
-                  </div>
-                </div>
+          <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div>
+                <label
+                  htmlFor="product-source"
+                  className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
+                >
+                  Saved research
+                </label>
+                <Select
+                  value={selectedSourceKey || null}
+                  onValueChange={(value) => {
+                    if (typeof value === 'string') {
+                      setSelectedSourceKey(value);
+                      setProduct(null);
+                      setSaveMessage(null);
+                    }
+                  }}
+                >
+                  <SelectTrigger
+                    id="product-source"
+                    className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                  >
+                    <SelectValue placeholder="Select a saved idea or example" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#121214] text-white">
+                    {sources.map((source) => (
+                      <SelectItem key={source.key} value={source.key}>
+                        {source.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </Card>
+              <Button
+                type="button"
+                disabled={isLoading || !selectedSourceKey || isGenerating}
+                onClick={handleGenerate}
+                className="h-12 px-5 font-semibold"
+              >
+                {isGenerating ? (
+                  <InlineSpinner label="Structuring" />
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Run Strategist
+                  </>
+                )}
+              </Button>
+            </div>
 
-            {/* Mobile AI Suggestions (hidden on desktop) */}
-            <Card className="p-4 sm:p-6 bg-card border-white/5 lg:hidden border-primary/20 bg-primary/5">
-              <div className="flex items-center gap-2 mb-4">
-                <Bot className="w-5 h-5 text-primary" />
-                <span className="font-medium text-white text-sm">Your AI team suggests...</span>
-              </div>
-              <div className="space-y-3">
-                <div className="p-4 bg-black/20 rounded-lg border border-white/5">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Your title is clear, but we could make the subtitle punchier to highlight the "anti-overwhelm" aspect.
-                  </p>
-                  <Button size="sm" variant="secondary" className="w-full bg-primary/10 text-primary hover:bg-primary/20">
-                    <Wand2 className="w-3.5 h-3.5 mr-2" /> Improve subtitle
-                  </Button>
+            {selectedSource ? (
+              <div className="mt-4 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                <div className="mb-1 flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      selectedSource.kind === 'example'
+                        ? 'border-primary/20 bg-primary/10 text-primary'
+                        : 'border-amber-500/20 bg-amber-500/10 text-amber-300'
+                    }
+                  >
+                    {selectedSource.eyebrow}
+                  </Badge>
                 </div>
-                <div className="p-4 bg-black/20 rounded-lg border border-white/5">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Most ADHD planners miss a "Time Blindness" feature. Adding a visible time estimation column would add huge value.
-                  </p>
-                  <Button size="sm" variant="secondary" className="w-full bg-primary/10 text-primary hover:bg-primary/20">
-                    <Wand2 className="w-3.5 h-3.5 mr-2" /> Add Time Column
-                  </Button>
-                </div>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {selectedSource.description}
+                </p>
               </div>
-            </Card>
+            ) : null}
+          </Card>
 
-            <Card className="p-4 sm:p-6 bg-card border-white/5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 lg:mb-6 gap-3">
-                <h2 className="text-lg lg:text-xl font-medium text-white">Product structure</h2>
-                <Button variant="ghost" size="sm" className="w-full sm:w-auto text-primary hover:text-primary hover:bg-primary/10 -ml-2 sm:ml-0 justify-start sm:justify-center">
-                  <ListPlus className="w-4 h-4 mr-2" />
-                  Add section
-                </Button>
-              </div>
-              <div className="space-y-3">
-                <div className="p-3 lg:p-4 rounded-lg bg-white/[0.02] border border-white/5 flex items-start gap-3 lg:gap-4 group">
-                  <FileText className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground shrink-0 mt-1 lg:mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white mb-1 text-sm lg:text-base">Module 1: The Brain Dump</p>
-                    <p className="text-xs lg:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-none">A guided, unconstrained space to empty mental loads before prioritizing.</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white lg:opacity-0 group-hover:opacity-100 shrink-0"><Settings className="w-4 h-4" /></Button>
-                </div>
-                <div className="p-3 lg:p-4 rounded-lg bg-white/[0.02] border border-white/5 flex items-start gap-3 lg:gap-4 group">
-                  <CheckSquare className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground shrink-0 mt-1 lg:mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white mb-1 text-sm lg:text-base">Module 2: Top 3 Targets</p>
-                    <p className="text-xs lg:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-none">Forcing mechanism to select only 3 non-negotiable tasks per day.</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white lg:opacity-0 group-hover:opacity-100 shrink-0"><Settings className="w-4 h-4" /></Button>
-                </div>
-                <div className="p-3 lg:p-4 rounded-lg bg-white/[0.02] border border-white/5 flex items-start gap-3 lg:gap-4 group">
-                  <Link2 className="w-4 h-4 lg:w-5 lg:h-5 text-muted-foreground shrink-0 mt-1 lg:mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white mb-1 text-sm lg:text-base">Bonus: Reset Protocol</p>
-                    <p className="text-xs lg:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-none">A one-page guide on how to recover when the plan completely fails.</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white lg:opacity-0 group-hover:opacity-100 shrink-0"><Settings className="w-4 h-4" /></Button>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4 sm:p-6 bg-card border-white/5 border-dashed bg-white/[0.01]">
-              <h2 className="text-lg lg:text-xl font-medium text-white mb-4">Make it better</h2>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white text-xs lg:text-sm">Add examples</Button>
-                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white text-xs lg:text-sm">Add templates</Button>
-                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white text-xs lg:text-sm">Add checklist</Button>
-                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white text-xs lg:text-sm">Add tracker</Button>
-                <Button variant="outline" size="sm" className="border-white/10 hover:bg-white/5 text-muted-foreground hover:text-white text-xs lg:text-sm">Simplify language</Button>
-              </div>
-            </Card>
-          </form>
-
-          {/* Mobile action buttons (hidden on desktop) */}
-          <div className="mt-8 lg:hidden space-y-3">
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-sm font-semibold">
-              Create sales kit
-            </Button>
-            <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 text-white h-12 text-sm">
-              <Save className="w-4 h-4 mr-2" />
-              Save draft
-            </Button>
+          <div className="mb-5 space-y-3">
+            {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}
+            {notice ? <WorkflowNotice>{notice}</WorkflowNotice> : null}
+            {saveMessage ? (
+              <WorkflowNotice tone="success">{saveMessage}</WorkflowNotice>
+            ) : null}
           </div>
+
+          {!product ? (
+            <EmptyWorkflowState icon={Hammer} title="No product architecture yet">
+              {isLoading
+                ? 'Loading saved ideas and examples...'
+                : sources.length
+                  ? 'Choose a saved input and run Strategist to generate the product architecture.'
+                  : 'Save an idea or Analyst report before building the product architecture.'}
+            </EmptyWorkflowState>
+          ) : (
+            <div className="space-y-5">
+              <Card className="border-white/5 bg-card p-4 sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-primary/20 bg-primary/10 text-primary"
+                      >
+                        Strategist
+                      </Badge>
+                      <AiSourceBadge
+                        source={product.source}
+                        fallbackReason={product.fallbackReason}
+                      />
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight text-white">
+                      {product.positioning.title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {product.positioning.subtitle}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={handleSave}
+                      variant="outline"
+                      className="h-10 border-white/10 text-white hover:bg-white/5"
+                    >
+                      {isSaving ? (
+                        <InlineSpinner label="Saving" />
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Save
+                        </>
+                      )}
+                    </Button>
+                    <Link href="/app/sales-kit">
+                      <Button className="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                        Create Sales Kit
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Metric label="Buyer" value={product.positioning.targetBuyer} />
+                <Metric label="Category" value={product.positioning.category} />
+                <Metric label="Price" value={product.positioning.recommendedPrice} />
+                <Metric label="Promise" value={product.positioning.promise} />
+              </div>
+
+              <Card className="border-white/5 bg-card p-4 sm:p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-medium text-white">
+                    Product modules
+                  </h2>
+                </div>
+                <div className="space-y-3">
+                  {product.modules.map((module, index) => (
+                    <div
+                      key={module.title}
+                      className="rounded-lg border border-white/5 bg-white/[0.02] p-4"
+                    >
+                      <div className="mb-2 flex items-start gap-3">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-white">
+                            {module.title}
+                          </h3>
+                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                            {module.goal}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {module.includedAssets.map((asset) => (
+                          <Badge
+                            key={asset}
+                            variant="outline"
+                            className="border-white/10 bg-white/5 text-white/60"
+                          >
+                            {asset}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-white/55">
+                        Buyer outcome: {module.buyerOutcome}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <ChecklistCard
+                  icon={CheckCircle2}
+                  title="Key features"
+                  items={product.keyFeatures}
+                  iconClassName="text-emerald-400"
+                />
+                <ChecklistCard
+                  icon={Layers}
+                  title="Proof points"
+                  items={product.proofPoints}
+                  iconClassName="text-amber-300"
+                />
+              </div>
+
+              <Card className="border-white/5 bg-card p-4 sm:p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-medium text-white">Build plan</h2>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {product.buildPlan.map((step, index) => (
+                    <div
+                      key={step}
+                      className="rounded-lg border border-white/5 bg-white/[0.02] p-3"
+                    >
+                      <p className="mb-1 text-[10px] uppercase tracking-widest text-white/40">
+                        Step {index + 1}
+                      </p>
+                      <p className="text-sm leading-relaxed text-white/75">
+                        {step}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Desktop AI Assistant Panel */}
-      <div className="hidden lg:flex w-80 border-l border-white/5 bg-black/20 flex-col shrink-0">
-        <div className="p-4 border-b border-white/5 flex items-center gap-2">
-          <Bot className="w-5 h-5 text-primary" />
-          <span className="font-medium text-white">Your AI team suggests...</span>
+      <aside className="hidden w-80 shrink-0 border-l border-white/5 bg-black/20 lg:flex lg:flex-col">
+        <div className="flex items-center gap-2 border-b border-white/5 p-4">
+          <Bot className="h-5 w-5 text-primary" />
+          <span className="font-medium text-white">Strategist notes</span>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <Card className="p-4 bg-white/[0.02] border-white/5">
-            <p className="text-sm text-muted-foreground mb-3">
-              Your title is clear, but we could make the subtitle punchier to highlight the "anti-overwhelm" aspect.
+        <div className="space-y-4 overflow-y-auto p-4">
+          <Card className="border-white/5 bg-white/[0.02] p-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Start from Analyst output when available. It gives Strategist stronger pricing and differentiation signals than an idea alone.
             </p>
-            <Button size="sm" variant="secondary" className="w-full bg-primary/10 text-primary hover:bg-primary/20">
-              <Wand2 className="w-3.5 h-3.5 mr-2" /> Improve subtitle
-            </Button>
           </Card>
-
-          <Card className="p-4 bg-white/[0.02] border-white/5">
-            <p className="text-sm text-muted-foreground mb-3">
-              Most ADHD planners miss a "Time Blindness" feature. Adding a visible time estimation column would add huge value.
+          <Card className="border-white/5 bg-white/[0.02] p-4">
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Save the architecture before creating a sales kit so Creator can pull the modules and positioning from the database.
             </p>
-            <Button size="sm" variant="secondary" className="w-full bg-primary/10 text-primary hover:bg-primary/20">
-              <Wand2 className="w-3.5 h-3.5 mr-2" /> Add Time Column
-            </Button>
           </Card>
         </div>
-        <div className="p-4 border-t border-white/5 space-y-2">
-          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            Create sales kit
-          </Button>
-          <Button variant="outline" className="w-full border-white/10 hover:bg-white/5 text-white">
-            <Save className="w-4 h-4 mr-2" />
-            Save draft
-          </Button>
-        </div>
-      </div>
+      </aside>
     </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <Card className="border-white/5 bg-card p-4">
+      <p className="mb-2 text-[10px] uppercase tracking-widest text-white/40">
+        {label}
+      </p>
+      <p className="line-clamp-3 text-sm font-medium leading-relaxed text-white">
+        {value}
+      </p>
+    </Card>
+  );
+}
+
+function ChecklistCard({
+  icon: Icon,
+  title,
+  items,
+  iconClassName,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  items: string[];
+  iconClassName: string;
+}) {
+  return (
+    <Card className="border-white/5 bg-card p-4 sm:p-5">
+      <h2 className="mb-4 text-lg font-medium text-white">{title}</h2>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div key={item} className="flex gap-3 text-sm text-muted-foreground">
+            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconClassName}`} />
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }

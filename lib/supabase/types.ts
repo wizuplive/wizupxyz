@@ -8,7 +8,7 @@ export type Json =
 
 export type ProjectStatus = 'draft' | 'active' | 'archived';
 
-export interface ProfileRow {
+export interface ProfileRow extends Record<string, unknown> {
   id: string;
   email: string;
   full_name: string | null;
@@ -17,7 +17,7 @@ export interface ProfileRow {
   updated_at: string;
 }
 
-export interface ProfileInsert {
+export interface ProfileInsert extends Record<string, unknown> {
   id: string;
   email: string;
   full_name?: string | null;
@@ -26,7 +26,7 @@ export interface ProfileInsert {
   updated_at?: string;
 }
 
-export interface ProfileUpdate {
+export interface ProfileUpdate extends Record<string, unknown> {
   id?: string;
   email?: string;
   full_name?: string | null;
@@ -35,7 +35,7 @@ export interface ProfileUpdate {
   updated_at?: string;
 }
 
-export interface ProjectRow {
+export interface ProjectRow extends Record<string, unknown> {
   id: string;
   user_id: string;
   name: string;
@@ -44,7 +44,7 @@ export interface ProjectRow {
   updated_at: string;
 }
 
-export interface ProjectInsert {
+export interface ProjectInsert extends Record<string, unknown> {
   id?: string;
   user_id: string;
   name: string;
@@ -53,7 +53,7 @@ export interface ProjectInsert {
   updated_at?: string;
 }
 
-export interface ProjectUpdate {
+export interface ProjectUpdate extends Record<string, unknown> {
   id?: string;
   user_id?: string;
   name?: string;
@@ -62,7 +62,7 @@ export interface ProjectUpdate {
   updated_at?: string;
 }
 
-export interface IdeaRow {
+export interface IdeaRow extends Record<string, unknown> {
   id: string;
   project_id: string;
   title: string;
@@ -72,7 +72,7 @@ export interface IdeaRow {
   updated_at: string;
 }
 
-export interface IdeaInsert {
+export interface IdeaInsert extends Record<string, unknown> {
   id?: string;
   project_id: string;
   title: string;
@@ -82,7 +82,7 @@ export interface IdeaInsert {
   updated_at?: string;
 }
 
-export interface IdeaUpdate {
+export interface IdeaUpdate extends Record<string, unknown> {
   id?: string;
   project_id?: string;
   title?: string;
@@ -92,7 +92,7 @@ export interface IdeaUpdate {
   updated_at?: string;
 }
 
-export interface ExampleRow {
+export interface ExampleRow extends Record<string, unknown> {
   id: string;
   project_id: string;
   content: string;
@@ -101,7 +101,7 @@ export interface ExampleRow {
   updated_at: string;
 }
 
-export interface ExampleInsert {
+export interface ExampleInsert extends Record<string, unknown> {
   id?: string;
   project_id: string;
   content: string;
@@ -110,7 +110,7 @@ export interface ExampleInsert {
   updated_at?: string;
 }
 
-export interface ExampleUpdate {
+export interface ExampleUpdate extends Record<string, unknown> {
   id?: string;
   project_id?: string;
   content?: string;
@@ -119,7 +119,7 @@ export interface ExampleUpdate {
   updated_at?: string;
 }
 
-export interface ProductRow {
+export interface ProductRow extends Record<string, unknown> {
   id: string;
   project_id: string;
   content: Json;
@@ -128,7 +128,7 @@ export interface ProductRow {
   updated_at: string;
 }
 
-export interface ProductInsert {
+export interface ProductInsert extends Record<string, unknown> {
   id?: string;
   project_id: string;
   content?: Json;
@@ -137,7 +137,7 @@ export interface ProductInsert {
   updated_at?: string;
 }
 
-export interface ProductUpdate {
+export interface ProductUpdate extends Record<string, unknown> {
   id?: string;
   project_id?: string;
   content?: Json;
@@ -146,7 +146,7 @@ export interface ProductUpdate {
   updated_at?: string;
 }
 
-export interface SalesAssetRow {
+export interface SalesAssetRow extends Record<string, unknown> {
   id: string;
   project_id: string;
   asset_type: string;
@@ -155,7 +155,7 @@ export interface SalesAssetRow {
   updated_at: string;
 }
 
-export interface SalesAssetInsert {
+export interface SalesAssetInsert extends Record<string, unknown> {
   id?: string;
   project_id: string;
   asset_type: string;
@@ -164,7 +164,7 @@ export interface SalesAssetInsert {
   updated_at?: string;
 }
 
-export interface SalesAssetUpdate {
+export interface SalesAssetUpdate extends Record<string, unknown> {
   id?: string;
   project_id?: string;
   asset_type?: string;
@@ -173,7 +173,7 @@ export interface SalesAssetUpdate {
   updated_at?: string;
 }
 
-export interface StoreRow {
+export interface StoreRow extends Record<string, unknown> {
   id: string;
   project_id: string;
   content: Json;
@@ -183,7 +183,7 @@ export interface StoreRow {
   updated_at: string;
 }
 
-export interface StoreInsert {
+export interface StoreInsert extends Record<string, unknown> {
   id?: string;
   project_id: string;
   content?: Json;
@@ -193,7 +193,7 @@ export interface StoreInsert {
   updated_at?: string;
 }
 
-export interface StoreUpdate {
+export interface StoreUpdate extends Record<string, unknown> {
   id?: string;
   project_id?: string;
   content?: Json;
