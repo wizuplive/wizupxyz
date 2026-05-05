@@ -47,7 +47,7 @@ export default function OnboardingFlow() {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.push('/studio');
+      router.push('/app');
     }
   };
 
@@ -85,7 +85,7 @@ export default function OnboardingFlow() {
             {STEPS[currentStep - 1].title}
           </h1>
           <p className="text-muted-foreground text-center mb-10">
-            WIZUP will customize your studio experience based on this.
+            WIZUP will customize your workspace experience based on this.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-8 sm:mb-10 max-w-[420px] sm:max-w-none mx-auto">

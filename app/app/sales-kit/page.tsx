@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sparkles, Eye } from 'lucide-react';
 import Link from 'next/link';
 
-export default function LaunchPage() {
+export default function SalesKitPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -17,7 +17,7 @@ export default function LaunchPage() {
           <h1 className="text-2xl lg:text-3xl font-medium text-white mb-1 lg:mb-2">Create your sales kit</h1>
           <p className="text-sm lg:text-lg text-muted-foreground">Create the sales page, emails, social posts, and pricing for your product.</p>
         </div>
-        <Link href="/studio/storefront" className="w-full sm:w-auto">
+        <Link href="/app/store" className="w-full sm:w-auto">
           <Button variant="outline" className="w-full sm:w-auto border-white/10 text-white hover:bg-white/5 h-12 sm:h-10">
             <Eye className="w-4 h-4 mr-2" />
             Open Store

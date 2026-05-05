@@ -3,9 +3,9 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dna, AlertCircle, Quote, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Layers, AlertCircle, Quote, TrendingUp, CheckCircle2 } from 'lucide-react';
 
-export default function StudyWinnersPage() {
+export default function ExamplesPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-8">
@@ -13,7 +13,7 @@ export default function StudyWinnersPage() {
         <p className="text-sm lg:text-lg text-muted-foreground mb-4 sm:mb-6">See the patterns behind high-performing digital products — then build something original.</p>
         
         <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs sm:text-sm text-primary w-full sm:w-auto">
-          <Dna className="w-4 h-4 shrink-0" />
+          <Layers className="w-4 h-4 shrink-0" />
           <span className="leading-tight">WIZUP helps you learn from the market, then create something original.</span>
         </div>
       </div>

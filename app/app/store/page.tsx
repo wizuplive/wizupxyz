@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export default function StorefrontPreviewPage() {
+export default function StorePage() {
   return (
     <div className="h-[calc(100vh-theme(spacing.16))] lg:h-screen flex flex-col bg-background relative overflow-hidden">
       {/* Editor top bar overlay */}
       <div className="min-h-[56px] py-3 sm:py-0 border-b border-white/5 bg-background/80 backdrop-blur-md flex flex-wrap items-center justify-between px-4 sm:px-6 shrink-0 sticky top-0 z-50 gap-x-4 gap-y-2">
-        <Link href="/studio/launch" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-white transition-colors">
+        <Link href="/app/sales-kit" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4 mr-1 sm:mr-2" />
           <span className="hidden sm:inline">Back to editing</span>
           <span className="sm:hidden">Back</span>

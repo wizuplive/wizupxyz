@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, FileText, LayoutTemplate, Rocket, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function VaultPage() {
+export default function SavedPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-8">

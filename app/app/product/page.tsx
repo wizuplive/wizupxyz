@@ -8,7 +8,7 @@ import {
   Bot, Settings, Wand2, FileText, CheckSquare, ListPlus, Link2, Download, Save
 } from 'lucide-react';
 
-export default function ForgePage() {
+export default function ProductPage() {
   return (
     <div className="flex h-[calc(100vh-theme(spacing.16))] lg:h-screen">
       {/* Editor Section */}

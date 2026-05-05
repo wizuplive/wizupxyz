@@ -17,13 +17,13 @@ const TREND_DATA = [
   { name: 'Jun', demand: 110 },
 ];
 
-export default function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function IdeaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
   
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-8">
-        <Link href="/studio/radar" className="inline-flex items-center text-sm text-muted-foreground hover:text-white mb-4 sm:mb-6 transition-colors">
+        <Link href="/app/ideas" className="inline-flex items-center text-sm text-muted-foreground hover:text-white mb-4 sm:mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to ideas
         </Link>
@@ -36,7 +36,7 @@ export default function OpportunityDetailPage({ params }: { params: Promise<{ id
             <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 flex-1 lg:flex-none">
               Save idea
             </Button>
-            <Link href="/studio/forge" className="flex-1 lg:flex-none">
+            <Link href="/app/product" className="flex-1 lg:flex-none">
               <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                 Build this product
               </Button>
@@ -189,5 +189,3 @@ export default function OpportunityDetailPage({ params }: { params: Promise<{ id
     </div>
   );
 }
-
-// Ensure Hammer is imported. Ah I forgot to import it. Let me just replace Hammer with Target or something in the JSX, or add the import.

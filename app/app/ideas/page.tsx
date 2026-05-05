@@ -55,7 +55,7 @@ const MOCK_IDEAS = [
   }
 ];
 
-export default function RadarPage() {
+export default function IdeasPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto h-full flex flex-col pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-8">
@@ -103,7 +103,7 @@ export default function RadarPage() {
           {MOCK_IDEAS.map((idea) => (
             <Link 
               key={idea.id} 
-              href={`/studio/radar/${idea.id}`}
+              href={`/app/ideas/${idea.id}`}
               className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-white/[0.02] transition-colors group"
             >
               <div className="col-span-3 font-medium text-white group-hover:text-primary transition-colors flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function RadarPage() {
         {MOCK_IDEAS.map((idea) => (
           <Link 
             key={idea.id} 
-            href={`/studio/radar/${idea.id}`}
+            href={`/app/ideas/${idea.id}`}
             className="flex flex-col bg-card border border-white/5 rounded-xl p-4 sm:p-5 hover:border-white/10 transition-colors gap-4"
           >
             <div className="flex justify-between items-start gap-4">

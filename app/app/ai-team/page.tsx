@@ -21,7 +21,7 @@ const LOGS = [
   { id: 5, agent: 'Creator', time: '1h ago', icon: Sparkles, message: 'Generated 12-page guide outline.', details: 'Draft saved to your workspace.' },
 ];
 
-export default function KratosPage() {
+export default function AITeamPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto pb-24 lg:pb-8">
       <div className="mb-6 lg:mb-10">

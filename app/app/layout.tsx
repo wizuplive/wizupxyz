@@ -2,20 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Radar, 
-  Dna, 
-  Hammer, 
-  Rocket, 
-  Store, 
-  Archive, 
-  Bot, 
-  Settings 
+import {
+  LayoutDashboard,
+  Lightbulb,
+  Layers,
+  Hammer,
+  Rocket,
+  Store,
+  Archive,
+  Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,26 +23,40 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const navItems = [
-  { href: '/studio', label: 'Home', icon: LayoutDashboard },
-  { href: '/studio/radar', label: 'Ideas', icon: Radar },
-  { href: '/studio/dna', label: 'Examples', icon: Dna },
-  { href: '/studio/forge', label: 'Product', icon: Hammer },
-  { href: '/studio/launch', label: 'Sales Kit', icon: Rocket },
-  { href: '/studio/storefront', label: 'Store', icon: Store },
-  { href: '/studio/vault', label: 'Saved', icon: Archive },
-  { href: '/studio/kratos', label: 'AI Team', icon: Bot },
+  { href: '/app', label: 'Home', icon: LayoutDashboard },
+  { href: '/app/ideas', label: 'Ideas', icon: Lightbulb },
+  { href: '/app/examples', label: 'Examples', icon: Layers },
+  { href: '/app/product', label: 'Product', icon: Hammer },
+  { href: '/app/sales-kit', label: 'Sales Kit', icon: Rocket },
+  { href: '/app/store', label: 'Store', icon: Store },
+  { href: '/app/saved', label: 'Saved', icon: Archive },
+  { href: '/app/ai-team', label: 'AI Team', icon: Bot },
 ];
 
-export default function StudioLayout({ children }: { children: React.ReactNode }) {
+const profileMenuItems = [
+  { href: '/app/profile', label: 'Profile' },
+  { href: '/app/billing', label: 'Billing' },
+  { href: '/app/settings', label: 'Settings' },
+  { href: '/app/help', label: 'Help' },
+];
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isNavItemActive = (href: string) => {
+    if (href === '/app') {
+      return pathname === href;
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-white/5 bg-background flex-col shrink-0 z-20 hidden lg:flex p-6">
         <div className="flex items-center gap-3 mb-12">
-          <Link href="/studio" className="flex items-center gap-2 group">
+          <Link href="/app" className="flex items-center gap-2 group">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <div className="w-4 h-4 border-2 border-white rounded-sm rotate-45 transition-transform group-hover:rotate-90"></div>
             </div>
@@ -53,11 +65,8 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         </div>
 
         <nav className="flex-1 overflow-y-auto space-y-1 flex flex-col gap-1 -mx-3">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/30 mb-4 px-5">
-            Studio
-          </div>
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = isNavItemActive(item.href);
             return (
               <Link 
                 key={item.href} 
@@ -84,7 +93,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
            <div className="p-4 bg-gradient-to-br from-primary/20 to-transparent border border-primary/20 rounded-xl mb-4">
              <p className="text-xs text-blue-200 font-medium mb-2">Ready to build?</p>
              <p className="text-[10px] text-white/50 leading-relaxed mb-3">Find ideas people already want.</p>
-             <Link href="/studio/radar">
+             <Link href="/app/ideas">
                <button className="w-full py-2 bg-primary hover:bg-primary/90 text-white text-[11px] font-semibold rounded-lg shadow-lg shadow-primary/20 transition-all">Start Scan</button>
              </Link>
            </div>
@@ -123,34 +132,12 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
                 </svg>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60 bg-[#121214] text-white border-white/5 mt-1.5 shadow-2xl p-1 rounded-xl">
-                <div className="px-2 py-2 mb-1">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-9 h-9 rounded-full border border-white/10">
-                      <AvatarFallback className="bg-gradient-to-tr from-gray-800 to-gray-600 text-xs text-white">SJ</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col gap-0.5">
-                      <p className="text-[13px] font-medium text-white leading-none">Sarah Jenkins</p>
-                      <p className="text-[11px] text-white/50 leading-none">sarah@wizup.app</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 inline-flex items-center rounded-md bg-white/5 border border-white/5 px-2 py-0.5 text-[10px] font-medium text-white/70">
-                    Pro Creator
-                  </div>
-                </div>
-                <DropdownMenuSeparator className="bg-white/5 mx-1 mb-1" />
                 <div className="flex flex-col gap-0.5">
-                  <DropdownMenuItem onClick={() => router.push('/studio/profile')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/billing')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/settings')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/help')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Help
-                  </DropdownMenuItem>
+                  {profileMenuItems.map((item) => (
+                    <DropdownMenuItem key={item.href} onClick={() => router.push(item.href)} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
                 </div>
                 <DropdownMenuSeparator className="bg-white/5 mx-1 my-1" />
                 <DropdownMenuItem onClick={() => console.log('TODO: connect Supabase signOut')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
@@ -163,7 +150,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
 
         {/* Mobile Header */}
         <header className="h-14 border-b border-white/5 flex items-center justify-between px-4 shrink-0 lg:hidden bg-[#0A0A0B] relative z-30">
-          <Link href="/studio" className="flex items-center gap-2 group">
+          <Link href="/app" className="flex items-center gap-2 group">
             <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center">
               <div className="w-3.5 h-3.5 border-2 border-white rounded-sm rotate-45"></div>
             </div>
@@ -176,44 +163,12 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60 bg-[#121214] text-white border-white/5 mt-1.5 shadow-2xl p-1 rounded-xl">
-                 {/* Reusing exact same dropdown contents for mobile for consistency */}
-                <div className="px-2 py-2 mb-1">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-9 h-9 rounded-full border border-white/10">
-                      <AvatarFallback className="bg-gradient-to-tr from-gray-800 to-gray-600 text-xs text-white">SJ</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col gap-0.5">
-                      <p className="text-[13px] font-medium text-white leading-none">Sarah Jenkins</p>
-                      <p className="text-[11px] text-white/50 leading-none">sarah@wizup.app</p>
-                    </div>
-                  </div>
-                </div>
-                <DropdownMenuSeparator className="bg-white/5 mx-1 mb-1" />
                 <div className="flex flex-col gap-0.5">
-                  <DropdownMenuItem onClick={() => router.push('/studio/dna')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Examples
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/vault')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Saved Work
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/kratos')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    AI Team
-                  </DropdownMenuItem>
-                </div>
-                <DropdownMenuSeparator className="bg-white/5 mx-1 my-1" />
-                <div className="flex flex-col gap-0.5">
-                  <DropdownMenuItem onClick={() => router.push('/studio/profile')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/billing')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Billing
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/settings')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/studio/help')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
-                    Help
-                  </DropdownMenuItem>
+                  {profileMenuItems.map((item) => (
+                    <DropdownMenuItem key={item.href} onClick={() => router.push(item.href)} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
                 </div>
                 <DropdownMenuSeparator className="bg-white/5 mx-1 my-1" />
                 <DropdownMenuItem onClick={() => console.log('TODO: connect Supabase signOut')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
@@ -227,7 +182,7 @@ export default function StudioLayout({ children }: { children: React.ReactNode }
         {/* Mobile Bottom Navigation */}
         <nav className="lg:hidden absolute bottom-0 left-0 right-0 h-16 bg-[#0A0A0B]/95 backdrop-blur-xl border-t border-white/5 flex items-center justify-around z-40 px-1 pb-safe">
           {navItems.filter(item => ['Home', 'Ideas', 'Product', 'Sales Kit', 'Store'].includes(item.label)).map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = isNavItemActive(item.href);
             return (
               <Link key={item.href} href={item.href} className="flex flex-col items-center justify-center w-full h-full gap-1 p-1">
                 <div className={cn("p-1 rounded-full transition-colors", isActive ? "bg-white/10" : "transparent")}>

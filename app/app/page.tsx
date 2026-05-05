@@ -2,19 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Radar, Target, CheckCircle2, ChevronRight, PlayCircle, BarChart3, Bot, ArrowRight } from 'lucide-react';
+import { BarChart3, Bot, ArrowRight } from 'lucide-react';
 
-export default function StudioDashboard() {
+export default function AppDashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 flex-1 pb-20 lg:pb-8">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2 text-white">Your product workspace</h1>
-          <p className="text-sm lg:text-base text-white/50">See your best ideas, product drafts, and launch progress in one place.</p>
+          <p className="text-sm lg:text-base text-white/50">See your best ideas, product drafts, and sales progress in one place.</p>
         </div>
-        <Link href="/studio/forge" className="w-full lg:w-auto mt-2 lg:mt-0">
+        <Link href="/app/product" className="w-full lg:w-auto mt-2 lg:mt-0">
           <Button className="w-full lg:w-auto px-6 h-12 lg:h-10 bg-white text-black font-semibold rounded-lg text-sm hover:bg-gray-200 transition-colors">
             + New Build
           </Button>
@@ -41,7 +40,7 @@ export default function StudioDashboard() {
         <div className="bg-card border border-white/5 p-5 rounded-2xl border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]">
           <p className="text-[10px] uppercase tracking-widest text-white/40 mb-3">Top Recommendation</p>
           <div className="text-lg font-bold text-white truncate text-ellipsis">ADHD Planner</div>
-          <Link href="/studio/radar/1" className="mt-2 flex items-center text-[10px] text-emerald-400 font-medium hover:underline">Review idea <ArrowRight className="w-3 h-3 ml-1" /></Link>
+          <Link href="/app/ideas/1" className="mt-2 flex items-center text-[10px] text-emerald-400 font-medium hover:underline">Review idea <ArrowRight className="w-3 h-3 ml-1" /></Link>
         </div>
       </div>
 
@@ -81,21 +80,21 @@ export default function StudioDashboard() {
             </div>
           </div>
 
-          <Link href="/studio/forge" className="w-full mt-6 relative z-10">
+          <Link href="/app/product" className="w-full mt-6 relative z-10">
             <Button variant="outline" className="w-full py-3 h-auto bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all text-white">
               Continue Building
             </Button>
           </Link>
         </div>
 
-        {/* KRATOS AI Feed */}
+        {/* AI Team Feed */}
         <div className="lg:col-span-2 bg-card border border-white/5 rounded-2xl p-5 lg:p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-primary" />
               <h3 className="text-xs font-bold uppercase tracking-widest text-white/60">Recent AI Team updates</h3>
             </div>
-            <Link href="/studio/kratos" className="text-[10px] text-white/30 hover:text-white transition-colors">View all</Link>
+            <Link href="/app/ai-team" className="text-[10px] text-white/30 hover:text-white transition-colors">View all</Link>
           </div>
           
           <div className="space-y-4 flex-1 mt-2">
