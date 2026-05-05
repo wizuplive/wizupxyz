@@ -149,77 +149,99 @@ export default function ProductPage() {
             </Button>
           </div>
 
-          <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-              <div>
-                <label
-                  htmlFor="product-source"
-                  className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
-                >
-                  Saved research
-                </label>
-                <Select
-                  value={selectedSourceKey || null}
-                  onValueChange={(value) => {
-                    if (typeof value === 'string') {
-                      setSelectedSourceKey(value);
-                      setProduct(null);
-                      setSaveMessage(null);
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    id="product-source"
-                    className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
-                  >
-                    <SelectValue placeholder="Select a saved idea or example" />
-                  </SelectTrigger>
-                  <SelectContent className="border-white/10 bg-[#121214] text-white">
-                    {sources.map((source) => (
-                      <SelectItem key={source.key} value={source.key}>
-                        {source.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {!isLoading && sources.length === 0 ? (
+            <Card className="mb-5 flex flex-col items-center justify-center border-white/5 bg-card p-8 text-center sm:p-10">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Hammer className="h-6 w-6 text-primary" />
               </div>
-              <Button
-                type="button"
-                disabled={isLoading || !selectedSourceKey || isGenerating}
-                onClick={handleGenerate}
-                className="h-12 px-5 font-semibold"
-              >
-                {isGenerating ? (
-                  <InlineSpinner label="Structuring" />
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Run Strategist
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {selectedSource ? (
-              <div className="mt-4 rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                <div className="mb-1 flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      selectedSource.kind === 'example'
-                        ? 'border-primary/20 bg-primary/10 text-primary'
-                        : 'border-amber-500/20 bg-amber-500/10 text-amber-300'
-                    }
+              <h2 className="mb-2 text-lg font-medium text-white">
+                You need saved research first
+              </h2>
+              <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
+                Strategist needs a saved idea or Analyst report to generate your product architecture. Go back and save some research first.
+              </p>
+              <div className="flex gap-3">
+                <a href="/app/ideas">
+                  <Button variant="outline" className="h-10 border-white/10 px-6 text-white hover:bg-white/5">Go to Scout Ideas</Button>
+                </a>
+                <a href="/app/examples">
+                  <Button className="h-10 px-6">Go to Analyst</Button>
+                </a>
+              </div>
+            </Card>
+          ) : (
+            <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <label
+                    htmlFor="product-source"
+                    className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
                   >
-                    {selectedSource.eyebrow}
-                  </Badge>
+                    Saved research
+                  </label>
+                  <Select
+                    value={selectedSourceKey || null}
+                    onValueChange={(value) => {
+                      if (typeof value === 'string') {
+                        setSelectedSourceKey(value);
+                        setProduct(null);
+                        setSaveMessage(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      id="product-source"
+                      className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                    >
+                      <SelectValue placeholder="Select a saved idea or example" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#121214] text-white">
+                      {sources.map((source) => (
+                        <SelectItem key={source.key} value={source.key}>
+                          {source.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {selectedSource.description}
-                </p>
+                <Button
+                  type="button"
+                  disabled={isLoading || !selectedSourceKey || isGenerating}
+                  onClick={handleGenerate}
+                  className="h-12 px-5 font-semibold"
+                >
+                  {isGenerating ? (
+                    <InlineSpinner label="Structuring" />
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Run Strategist
+                    </>
+                  )}
+                </Button>
               </div>
-            ) : null}
-          </Card>
+
+              {selectedSource ? (
+                <div className="mt-4 rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                  <div className="mb-1 flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={
+                        selectedSource.kind === 'example'
+                          ? 'border-primary/20 bg-primary/10 text-primary'
+                          : 'border-amber-500/20 bg-amber-500/10 text-amber-300'
+                      }
+                    >
+                      {selectedSource.eyebrow}
+                    </Badge>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {selectedSource.description}
+                  </p>
+                </div>
+              ) : null}
+            </Card>
+          )}
 
           <div className="mb-5 space-y-3">
             {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}

@@ -139,66 +139,83 @@ export default function ExamplesPage() {
         </div>
       </div>
 
-      <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div>
-            <label
-              htmlFor="idea-select"
-              className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
-            >
-              Saved idea
-            </label>
-            <Select
-              value={selectedIdeaId || null}
-              onValueChange={(value) => {
-                if (typeof value === 'string') {
-                  setSelectedIdeaId(value);
-                  setAnalysis(null);
-                  setSaveMessage(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="idea-select"
-                className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+      {!isLoading && ideas.length === 0 ? (
+        <Card className="mb-5 flex flex-col items-center justify-center border-white/5 bg-card p-8 text-center sm:p-10">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Search className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="mb-2 text-lg font-medium text-white">
+            You need a saved idea first
+          </h2>
+          <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Analyst needs a saved idea to generate market examples. Head over to the Scout workflow to find and save your first idea.
+          </p>
+          <a href="/app/ideas">
+            <Button className="h-10 px-6">Go to Scout Ideas</Button>
+          </a>
+        </Card>
+      ) : (
+        <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <label
+                htmlFor="idea-select"
+                className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
               >
-                <SelectValue placeholder="Select a saved idea" />
-              </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#121214] text-white">
-                {ideas.map((idea) => (
-                  <SelectItem key={idea.id} value={idea.id}>
-                    {idea.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                Saved idea
+              </label>
+              <Select
+                value={selectedIdeaId || null}
+                onValueChange={(value) => {
+                  if (typeof value === 'string') {
+                    setSelectedIdeaId(value);
+                    setAnalysis(null);
+                    setSaveMessage(null);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="idea-select"
+                  className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                >
+                  <SelectValue placeholder="Select a saved idea" />
+                </SelectTrigger>
+                <SelectContent className="border-white/10 bg-[#121214] text-white">
+                  {ideas.map((idea) => (
+                    <SelectItem key={idea.id} value={idea.id}>
+                      {idea.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="button"
+              disabled={isLoading || !selectedIdeaId || isGenerating}
+              onClick={handleGenerate}
+              className="h-12 px-5 font-semibold"
+            >
+              {isGenerating ? (
+                <InlineSpinner label="Analyzing" />
+              ) : (
+                <>
+                  <Search className="h-4 w-4" />
+                  Run Analyst
+                </>
+              )}
+            </Button>
           </div>
 
-          <Button
-            type="button"
-            disabled={isLoading || !selectedIdeaId || isGenerating}
-            onClick={handleGenerate}
-            className="h-12 px-5 font-semibold"
-          >
-            {isGenerating ? (
-              <InlineSpinner label="Analyzing" />
-            ) : (
-              <>
-                <Search className="h-4 w-4" />
-                Run Analyst
-              </>
-            )}
-          </Button>
-        </div>
-
-        {selectedIdea ? (
-          <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 sm:grid-cols-3">
-            <MiniStat label="Buyer" value={selectedIdea.buyer || 'Not saved'} />
-            <MiniStat label="Format" value={selectedIdea.format || 'Not saved'} />
-            <MiniStat label="Score" value={String(selectedIdea.opportunityScore ?? 'Not saved')} />
-          </div>
-        ) : null}
-      </Card>
+          {selectedIdea ? (
+            <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 sm:grid-cols-3">
+              <MiniStat label="Buyer" value={selectedIdea.buyer || 'Not saved'} />
+              <MiniStat label="Format" value={selectedIdea.format || 'Not saved'} />
+              <MiniStat label="Score" value={String(selectedIdea.opportunityScore ?? 'Not saved')} />
+            </div>
+          ) : null}
+        </Card>
+      )}
 
       <div className="mb-5 space-y-3">
         {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}

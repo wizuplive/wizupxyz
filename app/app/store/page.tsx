@@ -262,12 +262,28 @@ export default function StorePage() {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[420px_1fr]">
-          <Card className="border-white/5 bg-card p-4 sm:p-5">
-            <div className="mb-5 flex items-center gap-2">
-              <Store className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-medium text-white">Store settings</h2>
+        {!isLoading && products.length === 0 ? (
+          <Card className="flex flex-col items-center justify-center border-white/5 bg-card p-8 text-center sm:p-10">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Store className="h-6 w-6 text-primary" />
             </div>
+            <h2 className="mb-2 text-lg font-medium text-white">
+              You need a saved product first
+            </h2>
+            <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Reviewer needs a product architecture to score your store readiness. Go back and save a product from the Strategist workflow.
+            </p>
+            <a href="/app/product">
+              <Button className="h-10 px-6">Go to Strategist</Button>
+            </a>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[420px_1fr]">
+            <Card className="border-white/5 bg-card p-4 sm:p-5">
+              <div className="mb-5 flex items-center gap-2">
+                <Store className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-medium text-white">Store settings</h2>
+              </div>
 
             <div className="space-y-4">
               <div>
@@ -444,6 +460,7 @@ export default function StorePage() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -156,97 +156,114 @@ export default function SalesKitPage() {
         </Link>
       </div>
 
-      <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_180px_auto] lg:items-end">
-          <div>
-            <label
-              htmlFor="product-select"
-              className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
-            >
-              Saved product
-            </label>
-            <Select
-              value={selectedProductId || null}
-              onValueChange={(value) => {
-                if (typeof value === 'string') {
-                  setSelectedProductId(value);
-                  setAssets(null);
-                  setSaveMessage(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="product-select"
-                className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+      {!isLoading && products.length === 0 ? (
+        <Card className="mb-5 flex flex-col items-center justify-center border-white/5 bg-card p-8 text-center sm:p-10">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Rocket className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="mb-2 text-lg font-medium text-white">
+            You need a saved product first
+          </h2>
+          <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Creator needs a product architecture to generate your sales kit. Go back and save a product from the Strategist workflow.
+          </p>
+          <a href="/app/product">
+            <Button className="h-10 px-6">Go to Strategist</Button>
+          </a>
+        </Card>
+      ) : (
+        <Card className="mb-5 border-white/5 bg-card p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_180px_auto] lg:items-end">
+            <div>
+              <label
+                htmlFor="product-select"
+                className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
               >
-                <SelectValue placeholder="Select a saved product" />
-              </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#121214] text-white">
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="tone-select"
-              className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
-            >
-              Tone
-            </label>
-            <Select
-              value={tone}
-              onValueChange={(value) => {
-                if (typeof value === 'string') {
-                  setTone(value);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="tone-select"
-                className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                Saved product
+              </label>
+              <Select
+                value={selectedProductId || null}
+                onValueChange={(value) => {
+                  if (typeof value === 'string') {
+                    setSelectedProductId(value);
+                    setAssets(null);
+                    setSaveMessage(null);
+                  }
+                }}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-white/10 bg-[#121214] text-white">
-                {toneOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  id="product-select"
+                  className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                >
+                  <SelectValue placeholder="Select a saved product" />
+                </SelectTrigger>
+                <SelectContent className="border-white/10 bg-[#121214] text-white">
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="tone-select"
+                className="mb-2 block text-xs font-medium uppercase tracking-widest text-white/40"
+              >
+                Tone
+              </label>
+              <Select
+                value={tone}
+                onValueChange={(value) => {
+                  if (typeof value === 'string') {
+                    setTone(value);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="tone-select"
+                  className="h-12 w-full border-white/10 bg-[#0A0A0B] text-sm text-white"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-white/10 bg-[#121214] text-white">
+                  {toneOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="button"
+              disabled={isLoading || !selectedProductId || isGenerating}
+              onClick={handleGenerate}
+              className="h-12 px-5 font-semibold"
+            >
+              {isGenerating ? (
+                <InlineSpinner label="Writing" />
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Run Creator
+                </>
+              )}
+            </Button>
           </div>
 
-          <Button
-            type="button"
-            disabled={isLoading || !selectedProductId || isGenerating}
-            onClick={handleGenerate}
-            className="h-12 px-5 font-semibold"
-          >
-            {isGenerating ? (
-              <InlineSpinner label="Writing" />
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Run Creator
-              </>
-            )}
-          </Button>
-        </div>
-
-        {selectedProduct ? (
-          <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 sm:grid-cols-3">
-            <MiniStat label="Buyer" value={selectedProduct.buyer || 'Not saved'} />
-            <MiniStat label="Category" value={selectedProduct.category || 'Not saved'} />
-            <MiniStat label="Price" value={selectedProduct.price || 'Not saved'} />
-          </div>
-        ) : null}
-      </Card>
+          {selectedProduct ? (
+            <div className="mt-4 grid grid-cols-1 gap-3 border-t border-white/5 pt-4 sm:grid-cols-3">
+              <MiniStat label="Buyer" value={selectedProduct.buyer || 'Not saved'} />
+              <MiniStat label="Category" value={selectedProduct.category || 'Not saved'} />
+              <MiniStat label="Price" value={selectedProduct.price || 'Not saved'} />
+            </div>
+          ) : null}
+        </Card>
+      )}
 
       <div className="mb-5 space-y-3">
         {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}
