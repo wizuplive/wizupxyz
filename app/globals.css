@@ -64,12 +64,12 @@
 
   --sidebar-background: #0A0A0B;
   --sidebar-foreground: #F5F5F0;
-  --sidebar-primary: #2563eb;
+  --sidebar-primary: #c026d3;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #161618;
   --sidebar-accent-foreground: #F5F5F0;
   --sidebar-border: #ffffff10;
-  --sidebar-ring: #2563eb;
+  --sidebar-ring: #c026d3;
 }
 
 @layer base {
