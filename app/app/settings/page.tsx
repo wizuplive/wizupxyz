@@ -30,7 +30,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
             <div className="space-y-2">
               <Label htmlFor="workspaceName" className="text-xs text-white/70">Workspace name</Label>
-              <Input id="workspaceName" defaultValue="Sarah's Studio" className="bg-[#0A0A0B] border-white/10 text-sm h-11 lg:h-10" />
+              <Input id="workspaceName" defaultValue="Sarah's Workspace" className="bg-[#0A0A0B] border-white/10 text-sm h-11 lg:h-10" />
             </div>
             
             <div className="space-y-2">

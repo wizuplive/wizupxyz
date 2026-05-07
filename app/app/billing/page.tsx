@@ -184,10 +184,10 @@ export default function BillingPage() {
           <div className="bg-gradient-to-b from-[#1A1A1E] to-[#121214] border border-white/10 rounded-2xl p-4 sm:p-6">
             <h3 className="text-sm font-medium text-white mb-2">Need more workspace power?</h3>
             <p className="text-xs text-white/50 mb-4 sm:mb-6 leading-relaxed">
-              Upgrade to Studio for team features, more store pages, and advanced AI help.
+              Upgrade to Team for team features, more store pages, and advanced AI help.
             </p>
             <Button className="w-full bg-white hover:bg-white/90 text-black text-sm h-11 sm:h-9">
-              View Studio plan
+              View Team plan
             </Button>
           </div>
 

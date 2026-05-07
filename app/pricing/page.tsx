@@ -106,9 +106,9 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* Studio Plan */}
+            {/* Team Plan */}
             <div className="p-8 rounded-3xl bg-card border border-white/5 flex flex-col hover:border-white/10 transition-colors">
-              <h3 className="text-2xl font-medium text-white mb-2">Studio</h3>
+              <h3 className="text-2xl font-medium text-white mb-2">Team</h3>
               <p className="text-sm text-muted-foreground mb-6">For advanced creators and teams</p>
               <div className="mb-8 flex items-baseline gap-1">
                 <span className="text-5xl font-bold text-white">$99</span>
@@ -116,7 +116,7 @@ export default function PricingPage() {
               </div>
               <Link href="/onboarding" className="w-full mb-8">
                 <Button className="w-full bg-white/10 text-white hover:bg-white/20 h-12 text-sm font-medium">
-                  Start Studio
+                  Start Team
                 </Button>
               </Link>
               <div className="flex-1 space-y-4">
@@ -181,7 +181,7 @@ export default function PricingPage() {
                   <th className="py-4 px-6 text-left font-medium text-muted-foreground w-1/4">Feature</th>
                   <th className="py-4 px-6 text-center font-medium text-white w-1/4">Starter</th>
                   <th className="py-4 px-6 text-center font-medium text-white w-1/4">Pro</th>
-                  <th className="py-4 px-6 text-center font-medium text-white w-1/4">Studio</th>
+                  <th className="py-4 px-6 text-center font-medium text-white w-1/4">Team</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-white/80">
@@ -249,7 +249,7 @@ export default function PricingPage() {
                 Can I change plans later?
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground leading-relaxed pt-2">
-                Absolutely. You can upgrade from Starter to Pro, or from Pro to Studio at any time from your account settings.
+                Absolutely. You can upgrade from Starter to Pro, or from Pro to Team at any time from your account settings.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-3" className="bg-card border border-white/5 px-6 rounded-2xl">
