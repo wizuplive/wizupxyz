@@ -25,6 +25,7 @@ export interface ScoutInput {
   problem?: string;
   productType?: string;
   priceRange?: string;
+  researchNotes?: string;
 }
 
 export interface ScoutOpportunity {
@@ -47,6 +48,23 @@ export interface ScoutIdeasOutput extends AIResultMetadata<'Scout'> {
   summary: string;
   ideas: ScoutOpportunity[];
   nextSearches: string[];
+  research?: ScoutResearchContext;
+}
+
+export interface ScoutResearchSource {
+  title: string;
+  url: string;
+  provider: string;
+  score: number;
+  snippet: string;
+}
+
+export interface ScoutResearchContext {
+  scanId: string;
+  provider: string;
+  status: 'completed' | 'failed';
+  sources: ScoutResearchSource[];
+  error?: string;
 }
 
 export interface AnalystInput {

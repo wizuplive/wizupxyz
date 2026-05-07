@@ -203,6 +203,102 @@ export interface StoreUpdate extends Record<string, unknown> {
   updated_at?: string;
 }
 
+export interface MarketScanRow extends Record<string, unknown> {
+  id: string;
+  project_id: string;
+  query: string;
+  provider: string;
+  raw_results: Json;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MarketScanInsert extends Record<string, unknown> {
+  id?: string;
+  project_id: string;
+  query: string;
+  provider: string;
+  raw_results?: Json;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MarketScanUpdate extends Record<string, unknown> {
+  id?: string;
+  project_id?: string;
+  query?: string;
+  provider?: string;
+  raw_results?: Json;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SourceDocumentRow extends Record<string, unknown> {
+  id: string;
+  scan_id: string | null;
+  url: string;
+  content: string;
+  metadata: Json;
+  score: number | null;
+  created_at: string;
+}
+
+export interface SourceDocumentInsert extends Record<string, unknown> {
+  id?: string;
+  scan_id?: string | null;
+  url: string;
+  content: string;
+  metadata?: Json;
+  score?: number | null;
+  created_at?: string;
+}
+
+export interface SourceDocumentUpdate extends Record<string, unknown> {
+  id?: string;
+  scan_id?: string | null;
+  url?: string;
+  content?: string;
+  metadata?: Json;
+  score?: number | null;
+  created_at?: string;
+}
+
+export interface IntegrationRunRow extends Record<string, unknown> {
+  id: string;
+  provider: string;
+  endpoint: string;
+  payload: Json;
+  response: Json | null;
+  error: string | null;
+  duration_ms: number | null;
+  created_at: string;
+}
+
+export interface IntegrationRunInsert extends Record<string, unknown> {
+  id?: string;
+  provider: string;
+  endpoint: string;
+  payload?: Json;
+  response?: Json | null;
+  error?: string | null;
+  duration_ms?: number | null;
+  created_at?: string;
+}
+
+export interface IntegrationRunUpdate extends Record<string, unknown> {
+  id?: string;
+  provider?: string;
+  endpoint?: string;
+  payload?: Json;
+  response?: Json | null;
+  error?: string | null;
+  duration_ms?: number | null;
+  created_at?: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -303,6 +399,40 @@ export interface Database {
             referencedColumns: ['id'];
           },
         ];
+      };
+      market_scans: {
+        Row: MarketScanRow;
+        Insert: MarketScanInsert;
+        Update: MarketScanUpdate;
+        Relationships: [
+          {
+            foreignKeyName: 'market_scans_project_id_fkey';
+            columns: ['project_id'];
+            isOneToOne: false;
+            referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      source_documents: {
+        Row: SourceDocumentRow;
+        Insert: SourceDocumentInsert;
+        Update: SourceDocumentUpdate;
+        Relationships: [
+          {
+            foreignKeyName: 'source_documents_scan_id_fkey';
+            columns: ['scan_id'];
+            isOneToOne: false;
+            referencedRelation: 'market_scans';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      integration_runs: {
+        Row: IntegrationRunRow;
+        Insert: IntegrationRunInsert;
+        Update: IntegrationRunUpdate;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

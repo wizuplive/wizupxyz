@@ -14,11 +14,16 @@ import {
   type CreatorAssetsOutput,
   type ReviewerInput,
   type ReviewerStoreReadinessOutput,
+  type ScoutResearchContext,
   type ScoutIdeasOutput,
   type ScoutOpportunity,
   type StrategistInput,
   type StrategistProductOutlineOutput,
 } from '@/lib/ai';
+import {
+  runMarketAcquisition,
+  type MarketAcquisitionResult,
+} from '@/lib/acquisitions';
 import { createClient } from '@/lib/supabase/server';
 import type { Json, Tables } from '@/lib/supabase/types';
 
@@ -132,14 +137,60 @@ export async function scoutTopic(
     return fail('Enter a niche, audience, or problem to scan.');
   }
 
+  const db = await getDbContext();
+
+  if ('error' in db) {
+    return fail(db.error);
+  }
+
+  const projectId = await getOrCreateProjectId(db);
+
+  if (projectId.error || !projectId.data) {
+    return fail(projectId.error ?? 'Could not resolve a workspace project.');
+  }
+
+  let acquisition: MarketAcquisitionResult | null = null;
+  let acquisitionNotice: string | null = null;
+
+  try {
+    acquisition = await runMarketAcquisition({
+      supabase: db.supabase,
+      projectId: projectId.data,
+      query: trimmedTopic,
+      limit: 10,
+      timeRange: 'year',
+    });
+
+    if (acquisition.status === 'failed') {
+      acquisitionNotice = acquisition.error
+        ? `Research acquisition fallback: ${acquisition.error}`
+        : 'Research acquisition fallback used.';
+    }
+  } catch (error) {
+    acquisitionNotice = `Research acquisition fallback: ${messageFrom(
+      error,
+      'could not persist market research.'
+    )}`;
+  }
+
   try {
     const output = await runScout({
       niche: trimmedTopic,
       audience: trimmedTopic,
       problem: trimmedTopic,
+      researchNotes: acquisition
+        ? researchNotesFromAcquisition(acquisition)
+        : undefined,
     });
+    const enrichedOutput: ScoutIdeasOutput = {
+      ...output,
+      ...(acquisition ? { research: researchContext(acquisition) } : {}),
+    };
 
-    return ok(output, aiNotice(output));
+    return ok(
+      enrichedOutput,
+      combineNotices(aiNotice(output), acquisitionNotice)
+    );
   } catch (error) {
     return fail(messageFrom(error, 'Scout could not complete the market scan.'));
   }
@@ -176,6 +227,7 @@ export async function saveScoutIdea(
           model: scan.model,
           generatedAt: scan.generatedAt,
           fallbackReason: scan.fallbackReason,
+          research: scan.research,
         }
       : null,
     savedAt: new Date().toISOString(),
@@ -1138,6 +1190,48 @@ function revalidateWorkflowPaths() {
   WORKFLOW_PATHS.forEach((path) => revalidatePath(path));
 }
 
+function researchNotesFromAcquisition(acquisition: MarketAcquisitionResult) {
+  if (acquisition.sources.length === 0) {
+    return acquisition.error
+      ? `No live research sources were acquired. Acquisition error: ${acquisition.error}`
+      : 'No live research sources were acquired.';
+  }
+
+  const sourceNotes = acquisition.sources.slice(0, 8).map((source, index) =>
+    [
+      `${index + 1}. ${source.title}`,
+      `URL: ${source.canonicalUrl}`,
+      `Provider: ${source.provider}`,
+      `Score: ${source.score}`,
+      `Excerpt: ${source.snippet || source.content.slice(0, 500)}`,
+    ].join('\n')
+  );
+
+  return [
+    `Live market research scan: ${acquisition.query}`,
+    `Provider used: ${acquisition.provider}`,
+    ...sourceNotes,
+  ].join('\n\n');
+}
+
+function researchContext(
+  acquisition: MarketAcquisitionResult
+): ScoutResearchContext {
+  return {
+    scanId: acquisition.scanId,
+    provider: acquisition.provider,
+    status: acquisition.status,
+    sources: acquisition.sources.slice(0, 8).map((source) => ({
+      title: source.title,
+      url: source.canonicalUrl,
+      provider: source.provider,
+      score: source.score,
+      snippet: source.snippet || source.content.slice(0, 240),
+    })),
+    ...(acquisition.error ? { error: acquisition.error } : {}),
+  };
+}
+
 function aiNotice(output: { source: string; fallbackReason?: string }) {
   if (output.source !== 'mock') {
     return null;
@@ -1146,6 +1240,14 @@ function aiNotice(output: { source: string; fallbackReason?: string }) {
   return output.fallbackReason
     ? `AI mock fallback used: ${output.fallbackReason}`
     : 'AI mock fallback used.';
+}
+
+function combineNotices(...notices: Array<string | null>) {
+  const activeNotices = notices.filter(
+    (notice): notice is string => Boolean(notice)
+  );
+
+  return activeNotices.length > 0 ? activeNotices.join(' ') : null;
 }
 
 function ok<T>(data: T, notice: string | null = null): WorkflowActionResult<T> {
