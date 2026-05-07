@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 type NoticeTone = 'info' | 'success' | 'error';
 
 const noticeStyles: Record<NoticeTone, string> = {
-  info: 'border-primary/20 bg-primary/10 text-blue-100',
+  info: 'border-primary/20 bg-primary/10 text-fuchsia-100',
   success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-100',
   error: 'border-red-500/20 bg-red-500/10 text-red-100',
 };

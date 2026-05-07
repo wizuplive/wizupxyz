@@ -10,7 +10,7 @@ export default function HowItWorksPage() {
     <div className="flex flex-col min-h-screen bg-background relative overflow-hidden">
       {/* Background glow effects */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-[40%] right-[-10%] w-[30%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[40%] right-[-10%] w-[30%] h-[50%] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
 
       <MarketingHeader />
 
@@ -78,11 +78,11 @@ export default function HowItWorksPage() {
 
             {/* Step 4 */}
             <div className="p-8 rounded-3xl bg-card border border-white/5 flex flex-col md:flex-row items-start md:items-center gap-8 hover:border-white/10 transition-colors group">
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
-                <Rocket className="w-8 h-8 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Rocket className="w-8 h-8 text-primary group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex-1">
-                <div className="text-xs font-bold text-blue-500 tracking-widest uppercase mb-2">Step 4</div>
+                <div className="text-xs font-bold text-primary tracking-widest uppercase mb-2">Step 4</div>
                 <h3 className="text-2xl font-medium text-white mb-2">Sales Kit</h3>
                 <p className="text-muted-foreground text-lg">Create your sales page, emails, and launch copy.</p>
               </div>

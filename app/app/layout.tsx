@@ -91,7 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="mt-auto pt-4 border-t border-white/5 -mx-6 px-6 relative">
            <div className="p-4 bg-gradient-to-br from-primary/20 to-transparent border border-primary/20 rounded-xl mb-4">
-             <p className="text-xs text-blue-200 font-medium mb-2">Ready to build?</p>
+             <p className="text-xs text-fuchsia-200 font-medium mb-2">Ready to build?</p>
              <p className="text-[10px] text-white/50 leading-relaxed mb-3">Find ideas people already want.</p>
              <Link href="/app/ideas">
                <button className="w-full py-2 bg-primary hover:bg-primary/90 text-white text-[11px] font-semibold rounded-lg shadow-lg shadow-primary/20 transition-all">Start Scan</button>
@@ -114,7 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex -space-x-2">
               <div className="w-7 h-7 rounded-full bg-emerald-500 border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold text-white">S</div>
               <div className="w-7 h-7 rounded-full bg-amber-500 border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold text-white">A</div>
-              <div className="w-7 h-7 rounded-full bg-blue-500 border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold text-white">C</div>
+              <div className="w-7 h-7 rounded-full bg-primary border-2 border-[#0A0A0B] flex items-center justify-center text-[10px] font-bold text-white">C</div>
             </div>
             <div className="h-8 w-[1px] bg-white/5 mx-1"></div>
             

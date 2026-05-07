@@ -5,7 +5,7 @@ export function MarketingFooter() {
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm text-white">WIZUP</span>
         </div>
-        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} WIZUP Studio. All rights reserved.</p>
+        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} WIZUP. All rights reserved.</p>
       </div>
     </footer>
   );

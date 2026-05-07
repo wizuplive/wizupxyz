@@ -4,7 +4,7 @@ import {
   listSavedProducts,
   listSavedSalesAssets,
 } from '@/app/actions/workflow';
-import { VaultClient } from './vault-client';
+import { SavedClient } from './saved-client';
 
 export default async function SavedPage() {
   const [ideasResult, examplesResult, productsResult, salesAssetsResult] = await Promise.all([
@@ -15,7 +15,7 @@ export default async function SavedPage() {
   ]);
 
   return (
-    <VaultClient
+    <SavedClient
       ideas={ideasResult.data ?? []}
       examples={examplesResult.data ?? []}
       products={productsResult.data ?? []}

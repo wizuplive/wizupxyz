@@ -69,8 +69,8 @@ export default function MarketingHomepage() {
             </div>
 
             <div className="p-6 rounded-2xl bg-card border border-white/5 flex flex-col items-start hover:border-white/10 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-6">
-                <ChevronRight className="w-6 h-6 text-blue-500" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <ChevronRight className="w-6 h-6 text-primary" />
               </div>
               <h3 className="text-xl font-medium text-white mb-2">Sales Kit</h3>
               <p className="text-muted-foreground">Create the sales page, emails, social posts, and pricing to prepare for launch.</p>

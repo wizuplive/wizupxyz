@@ -22,7 +22,7 @@ type UnifiedItem = {
   link: string;
 };
 
-export function VaultClient({
+export function SavedClient({
   ideas,
   examples,
   products,
@@ -53,8 +53,8 @@ export function VaultClient({
       title: e.title,
       description: e.summary || 'Market pattern analysis',
       date: e.createdAt,
-      icon: <FileText className="w-5 h-5 text-blue-500" />,
-      badgeClass: 'border-blue-500/20 text-blue-500 bg-blue-500/5',
+      icon: <FileText className="w-5 h-5 text-primary" />,
+      badgeClass: 'border-primary/20 text-primary bg-primary/5',
       link: '/app/examples'
     })),
     ...products.map(p => ({
@@ -128,7 +128,7 @@ export function VaultClient({
             No saved items yet
           </h2>
           <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground">
-            Complete workflow steps to save ideas, examples, products, and sales kits to your vault.
+            Complete workflow steps to save ideas, examples, products, and sales kits to your Saved items.
           </p>
         </Card>
       ) : (

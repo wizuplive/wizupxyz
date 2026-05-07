@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Bot, Activity, BrainCircuit, ScanSearch, CheckSquare, Sparkles } from 'lucide-react';
 
 const AGENTS = [
-  { name: 'Scout', role: 'Finds buyer problems', icon: ScanSearch, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  { name: 'Scout', role: 'Finds buyer problems', icon: ScanSearch, color: 'text-primary', bg: 'bg-primary/10' },
   { name: 'Analyst', role: 'Spots patterns', icon: Search, color: 'text-amber-500', bg: 'bg-amber-500/10' },
   { name: 'Strategist', role: 'Scores the idea', icon: BrainCircuit, color: 'text-primary', bg: 'bg-primary/10' },
   { name: 'Creator', role: 'Builds product draft', icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-500/10' },
