@@ -288,6 +288,32 @@ export async function generateExamplesFromIdea(
   const idea = ideaResult.data;
   const opportunity = getOpportunityFromMetadata(idea.ai_metadata);
 
+  let acquisition: MarketAcquisitionResult | null = null;
+  let acquisitionNotice: string | null = null;
+
+  try {
+    const projectId = await getOrCreateProjectId(db);
+    if (!projectId.error && projectId.data) {
+      acquisition = await runMarketAcquisition({
+        supabase: db.supabase,
+        projectId: projectId.data,
+        query: `${idea.title} ${asString(opportunity.buyer)}`,
+        limit: 10,
+        timeRange: 'year',
+      });
+      if (acquisition.status === 'failed') {
+        acquisitionNotice = acquisition.error
+          ? `Research acquisition fallback: ${acquisition.error}`
+          : 'Research acquisition fallback used.';
+      }
+    }
+  } catch (error) {
+    acquisitionNotice = `Research acquisition fallback: ${messageFrom(
+      error,
+      'could not persist market research.'
+    )}`;
+  }
+
   try {
     const output = await runAnalyst({
       ideaTitle: idea.title,
@@ -301,9 +327,19 @@ export async function generateExamplesFromIdea(
       ]
         .filter(Boolean)
         .join('\n'),
+      researchNotes: acquisition
+        ? researchNotesFromAcquisition(acquisition)
+        : undefined,
     });
 
-    return ok(output, aiNotice(output));
+    const enrichedOutput: AnalystExamplesOutput = {
+      ...output,
+      ...(acquisition && acquisition.status !== 'failed'
+        ? { research: researchContext(acquisition) }
+        : {}),
+    };
+
+    return ok(enrichedOutput, acquisitionNotice || aiNotice(output));
   } catch (error) {
     return fail(messageFrom(error, 'Analyst could not generate examples.'));
   }

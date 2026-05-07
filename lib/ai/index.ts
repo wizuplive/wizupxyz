@@ -73,6 +73,7 @@ export interface AnalystInput {
   format?: string;
   priceRange?: string;
   notes?: string;
+  researchNotes?: string;
 }
 
 export interface CompetitiveExample {
@@ -99,6 +100,7 @@ export interface AnalystExamplesOutput extends AIResultMetadata<'Analyst'> {
   buyerComplaints: string[];
   improvementAngles: string[];
   recommendation: string;
+  research?: ScoutResearchContext;
 }
 
 export interface StrategistInput {
