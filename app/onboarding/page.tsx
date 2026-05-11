@@ -47,7 +47,7 @@ export default function OnboardingFlow() {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.push('/app');
+      router.push('/auth/login');
     }
   };
 
