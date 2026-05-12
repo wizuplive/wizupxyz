@@ -1,5 +1,6 @@
 'use client';
 
+import { useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -13,6 +14,7 @@ import {
   Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { signOut } from '@/app/actions/auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -43,12 +45,18 @@ const profileMenuItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isSigningOut, startSignOutTransition] = useTransition();
   const isNavItemActive = (href: string) => {
     if (href === '/app') {
       return pathname === href;
     }
 
     return pathname === href || pathname.startsWith(`${href}/`);
+  };
+  const handleSignOut = () => {
+    startSignOutTransition(() => {
+      void signOut();
+    });
   };
 
   return (
@@ -140,7 +148,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ))}
                 </div>
                 <DropdownMenuSeparator className="bg-white/5 mx-1 my-1" />
-                <DropdownMenuItem onClick={() => console.log('TODO: connect Supabase signOut')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
+                <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -171,7 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ))}
                 </div>
                 <DropdownMenuSeparator className="bg-white/5 mx-1 my-1" />
-                <DropdownMenuItem onClick={() => console.log('TODO: connect Supabase signOut')} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
+                <DropdownMenuItem onClick={handleSignOut} disabled={isSigningOut} className="text-white/70 hover:text-white focus:text-white focus:bg-white/5 cursor-pointer rounded-lg text-[13px] py-1.5 px-2.5 outline-none transition-colors">
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
