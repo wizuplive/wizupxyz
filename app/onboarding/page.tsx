@@ -35,6 +35,7 @@ const OPTIONS = {
 };
 
 export default function OnboardingFlow() {
+  const storageKey = 'wizup:onboarding-answers';
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [selections, setSelections] = useState<Record<number, string>>({});
@@ -47,7 +48,16 @@ export default function OnboardingFlow() {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      router.push('/auth/login');
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          productType: selections[1],
+          audience: selections[2],
+          market: selections[3],
+          startingPoint: selections[4],
+        })
+      );
+      router.push('/login?next=/app');
     }
   };
 

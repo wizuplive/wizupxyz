@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from '@/app/actions/auth';
+import { OnboardingSync } from './onboarding-sync';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -60,7 +61,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden relative">
+    <>
+      <OnboardingSync />
+      <div className="flex h-screen bg-background overflow-hidden relative">
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-white/5 bg-background flex-col shrink-0 z-20 hidden lg:flex p-6">
         <div className="flex items-center gap-3 mb-12">
@@ -207,5 +210,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
     </div>
+    </>
   );
 }

@@ -13,10 +13,10 @@ export function MarketingHeader() {
         <Link href="/faq" className="hover:text-white transition-colors">FAQ</Link>
       </nav>
       <div className="flex items-center gap-4">
-        <Link href="/auth/login">
+        <Link href="/login">
           <Button variant="ghost" className="text-white hover:bg-white/10 hidden sm:flex">Log in</Button>
         </Link>
-        <Link href="/auth/login">
+        <Link href="/login">
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium">
             Start building
           </Button>

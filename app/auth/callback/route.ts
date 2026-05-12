@@ -1,10 +1,18 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
+function getSafeRedirectPath(nextPath: string | null) {
+  if (!nextPath || !nextPath.startsWith('/') || nextPath.startsWith('//')) {
+    return '/app';
+  }
+
+  return nextPath;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/app';
+  const next = getSafeRedirectPath(searchParams.get('next'));
 
   if (code) {
     const response = NextResponse.redirect(`${origin}${next}`);
@@ -32,5 +40,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/`);
+  return NextResponse.redirect(`${origin}/login`);
 }

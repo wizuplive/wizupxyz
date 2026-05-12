@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
 const PROTECTED_PATH_PREFIX = '/app';
-const SIGN_IN_PATH = '/';
+const SIGN_IN_PATH = '/login';
 
 function hasSupabaseConfig() {
   return Boolean(
@@ -15,6 +15,7 @@ function redirectToSignIn(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.pathname = SIGN_IN_PATH;
   redirectUrl.search = '';
+  redirectUrl.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search);
 
   return NextResponse.redirect(redirectUrl);
 }
