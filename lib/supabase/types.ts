@@ -13,6 +13,7 @@ export interface ProfileRow extends Record<string, unknown> {
   email: string;
   full_name: string | null;
   onboarding_completed: boolean;
+  onboarding_preferences: Json;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,7 @@ export interface ProfileInsert extends Record<string, unknown> {
   email: string;
   full_name?: string | null;
   onboarding_completed?: boolean;
+  onboarding_preferences?: Json;
   created_at?: string;
   updated_at?: string;
 }
@@ -31,6 +33,7 @@ export interface ProfileUpdate extends Record<string, unknown> {
   email?: string;
   full_name?: string | null;
   onboarding_completed?: boolean;
+  onboarding_preferences?: Json;
   created_at?: string;
   updated_at?: string;
 }
