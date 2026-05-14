@@ -74,7 +74,7 @@ export async function signUpWithPassword(
     password,
     options: {
       data: fullName ? { full_name: fullName } : undefined,
-      emailRedirectTo: undefined,
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
   });
 
@@ -89,6 +89,23 @@ export async function signUpWithPassword(
   }
 
   redirect(`/login?mode=signup&signup=check-email&email=${encodeURIComponent(email)}`);
+}
+
+export async function resendConfirmationEmail(email: string): Promise<AuthActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { error: null };
 }
 
 export async function persistOnboardingAnswers(

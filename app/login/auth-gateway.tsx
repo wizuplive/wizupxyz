@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
-import { signInWithPassword, signUpWithPassword } from '@/app/actions/auth';
+import { signInWithPassword, signUpWithPassword, resendConfirmationEmail } from '@/app/actions/auth';
 import { WorkflowNotice } from '@/components/workflow/workflow-panels';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -33,6 +33,7 @@ export function AuthGateway({
 }) {
   const [mode, setMode] = useState<AuthMode>(defaultMode);
   const [error, setError] = useState<string | null>(null);
+  const [resendPending, setResendPending] = useState(false);
   const [isPending, startTransition] = useTransition();
   const safeNextPath = getSafeRedirectPath(nextPath);
 
@@ -42,13 +43,25 @@ export function AuthGateway({
     }
 
     return emailHint
-      ? `Check ${emailHint} to confirm your account, then sign in.`
-      : 'Check your email to confirm your account, then sign in.';
+      ? `Check ${emailHint} to confirm your account (check spam/promotions).`
+      : 'Check your email to confirm your account (check spam/promotions).';
   }, [emailHint, signupState]);
+
+  async function handleResend() {
+    if (!emailHint) return;
+    setResendPending(true);
+    setError(null);
+    const result = await resendConfirmationEmail(emailHint);
+    setResendPending(false);
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      setError('Confirmation email resent. Please check your inbox.');
+    }
+  }
 
   async function handleSubmit(formData: FormData) {
     setError(null);
-
     startTransition(async () => {
       const action = mode === 'signup' ? signUpWithPassword : signInWithPassword;
       const result = await action(formData);
@@ -108,7 +121,21 @@ export function AuthGateway({
           </div>
 
           <div className="mb-5 space-y-3">
-            {signupNotice ? <WorkflowNotice tone="success">{signupNotice}</WorkflowNotice> : null}
+            {signupNotice ? (
+              <WorkflowNotice tone="success">
+                {signupNotice}
+                {signupState === 'check-email' ? (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendPending}
+                    className="ml-2 underline hover:text-white"
+                  >
+                    {resendPending ? 'Sending...' : 'Resend'}
+                  </button>
+                ) : null}
+              </WorkflowNotice>
+            ) : null}
             {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}
           </div>
 
