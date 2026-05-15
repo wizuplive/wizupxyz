@@ -10,3 +10,7 @@ coverage/
 
 # Supabase local temp files
 supabase/.temp/
+
+secrets/
+*.env
+.DS_Store
