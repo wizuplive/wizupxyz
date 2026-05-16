@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { loadEnvConfig } from '@next/env';
+loadEnvConfig(process.cwd());
 
 import {
   runAnalyst,
@@ -127,6 +129,8 @@ const WORKFLOW_PATHS = [
   '/app/store',
   '/app/saved',
 ];
+
+import { env } from '@/lib/env';
 
 export async function scoutTopic(
   topic: string

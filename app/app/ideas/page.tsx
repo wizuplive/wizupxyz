@@ -37,9 +37,12 @@ export default function IdeasPage() {
 
   function handleScan(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!topic.trim()) return;
+
     setError(null);
     setNotice(null);
     setSaveMessage(null);
+    setScan(null);
 
     startScanTransition(async () => {
       const result = await scoutTopic(topic);

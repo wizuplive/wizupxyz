@@ -35,6 +35,7 @@ export function AuthGateway({
   const [error, setError] = useState<string | null>(null);
   const [resendPending, setResendPending] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isGooglePending, setIsGooglePending] = useState(false);
   const safeNextPath = getSafeRedirectPath(nextPath);
 
   const signupNotice = useMemo(() => {
@@ -70,6 +71,11 @@ export function AuthGateway({
         setError(result.error);
       }
     });
+  }
+
+  function handleGoogleLogin() {
+    setIsGooglePending(true);
+    window.location.href = `/auth/login?next=${encodeURIComponent(safeNextPath)}`;
   }
 
   return (
@@ -201,11 +207,22 @@ export function AuthGateway({
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          <Link href={`/auth/login?next=${encodeURIComponent(safeNextPath)}`}>
-            <Button type="button" variant="outline" className="h-12 w-full border-white/10 text-white hover:bg-white/5">
-              Continue with Google
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 w-full border-white/10 text-white hover:bg-white/5"
+            onClick={handleGoogleLogin}
+            disabled={isGooglePending}
+          >
+            {isGooglePending ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting...
+              </span>
+            ) : (
+              'Continue with Google'
+            )}
+          </Button>
 
           <p className="mt-5 text-center text-sm text-white/45">
             {mode === 'signup' ? 'Already have an account?' : 'Need an account?'}{' '}

@@ -1,6 +1,25 @@
 import 'server-only';
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { loadEnvConfig } from '@next/env';
+loadEnvConfig(process.cwd());
+
 import { GoogleGenAI } from '@google/genai';
+
+function runtimeEnv(name: string) {
+  const live = process.env[name]?.trim();
+  if (live) return live;
+
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (!fs.existsSync(envPath)) return '';
+
+  const line = fs.readFileSync(envPath, 'utf8')
+    .split(/\r?\n/)
+    .find((entry) => entry.trim().startsWith(name + '='));
+
+  return line ? line.slice(name.length + 1).trim().replace(/^['"]|['"]$/g, '') : '';
+}
 
 export type AIServiceLabel =
   | 'Scout'
@@ -332,10 +351,11 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
   options: GenerateStructuredOptions<TOutput>
 ): Promise<TOutput> {
   const model = getGeminiModel();
-  const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === 'true';
-  const apiKey = (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)?.trim();
+  const useVertex = runtimeEnv('GOOGLE_GENAI_USE_VERTEXAI') === 'true';
+  const apiKey = (runtimeEnv('GEMINI_API_KEY') || runtimeEnv('GOOGLE_API_KEY')).trim();
 
   if (!useVertex && !apiKey) {
+    console.warn('[AI] Fallback triggered: Missing Vertex AI or API key.');
     return options.fallback(
       createMetadata(
         options.role,
@@ -349,8 +369,8 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
   try {
     let ai: GoogleGenAI;
     if (useVertex) {
-      const project = process.env.GOOGLE_CLOUD_PROJECT;
-      const location = process.env.GOOGLE_CLOUD_LOCATION || 'global';
+      const project = runtimeEnv('GOOGLE_CLOUD_PROJECT');
+      const location = runtimeEnv('GOOGLE_CLOUD_LOCATION') || 'global';
       if (!project) {
         throw new Error('GOOGLE_CLOUD_PROJECT is required for Vertex AI.');
       }
@@ -395,7 +415,7 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
 }
 
 function getGeminiModel() {
-  return process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
+  return runtimeEnv('GEMINI_MODEL') || DEFAULT_GEMINI_MODEL;
 }
 
 function createMetadata(

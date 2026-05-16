@@ -3,7 +3,23 @@ import 'server-only';
 import { ProviderRequestError } from './types';
 
 export function envValue(name: string) {
-  return process.env[name]?.trim() || '';
+  const live = process.env[name]?.trim();
+  if (live) return live;
+
+  try {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const envPath = path.join(process.cwd(), '.env.local');
+    if (!fs.existsSync(envPath)) return '';
+
+    const line = fs.readFileSync(envPath, 'utf8')
+      .split(/\r?\n/)
+      .find((entry: string) => entry.trim().startsWith(name + '='));
+
+    return line ? line.slice(name.length + 1).trim().replace(/^['"]|['"]$/g, '') : '';
+  } catch {
+    return '';
+  }
 }
 
 export function clampLimit(limit: number, max: number) {
