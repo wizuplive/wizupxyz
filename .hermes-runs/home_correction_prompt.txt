@@ -1,0 +1,31 @@
+Correct the Home page (/app/app/page.tsx) based on the EKKO re-audit to move from a 'themed landing page' to a 'professional product-builder cockpit'.
+
+GOAL: Refine the visual hierarchy and layout for a professional tool feel.
+
+CORRECTIVE STEPS:
+1. CONDITIONAL HERO:
+   - Only render the 'Initialize Your Next Product' hero section if `!activeSession`.
+   - When `activeSession` exists, the 'Active Build Cockpit' must be the singular primary focal point of the page.
+
+2. DASHBOARD TYPOGRAPHY:
+   - Scale down the hero headline (if shown) from `text-6xl` to `text-3xl` or `text-4xl`.
+   - Tighten container padding and vertical spacing to enforce a high-density dashboard feel.
+
+3. ACTIVE BUILD COCKPIT RESTRUCTURE:
+   - Top Row: Place the product title, status, and next_action on the left; place the 'Resume Build' CTA on the right.
+   - Bottom Row: Place the 4-step pipeline stepper in its own dedicated full-width row below the top row.
+   - Eliminate the awkward dead space around the CTA.
+
+4. BUTTON REFINEMENT:
+   - Remove the heavy generic neon outer glow (`shadow-[0_0_20px...]`).
+   - Replace with a restrained premium style: either high-contrast (bg-white text-black) or a glassmorphic dark style with a subtle inner top-border highlight (`shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]`).
+
+5. OVERALL AESTHETIC:
+   - Maintain the dark cinematic style but apply restraint.
+   - Prioritize a 'professional tool' identity over a 'SaaS landing page' identity.
+
+CODEX DIRECTIVE:
+- Target file: /Users/Ira/Desktop/wizup-3.0/app/app/page.tsx
+- Keep all ActiveBuildSession logic and context wiring intact.
+- Do not add new dependencies.
+- Ensure a clean, high-density, professional layout.

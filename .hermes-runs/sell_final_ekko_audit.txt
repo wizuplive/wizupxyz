@@ -1,0 +1,13 @@
+Final Re-Audit of the refactored Sell page (/app/app/sell/page.tsx).
+
+GOAL:
+Verify that the 'copywriting form' has been replaced with a 'Premium Copywriting Studio' cockpit.
+
+CHECKLIST:
+1. LAYOUT STRUCTURE: Is there a sticky left sidebar for source draft context and a wide main canvas for drafting?
+2. MODULAR UX: Are the launch emails and FAQ lists handled by discrete sub-cards and dynamic array builders instead of pipe-delimited textareas?
+3. CINEMATIC DEPTH: Do the inputs and cards use glassmorphism, inner shadows, and deep-dark backgrounds?
+4. INPUT STATES: Do all inputs have the requested primary-glow focus states?
+5. COMMAND BAR: Is there a sticky bottom command bar with a glowing primary 'Save and continue' button?
+
+Verdict: PASS or FAIL. If FAIL, list only critical remaining gaps.

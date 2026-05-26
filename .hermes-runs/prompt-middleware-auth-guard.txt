@@ -1,0 +1,43 @@
+You are implementing a single, focused change to the WIZUP codebase.
+
+TASK: Add authenticated route protection to middleware.ts.
+
+CURRENT STATE of middleware.ts:
+- It only handles legacy route redirects (e.g., /app/ideas -> /app/find).
+- It has NO authentication check.
+- The matcher only covers the 6 legacy routes.
+
+REQUIRED BEHAVIOR:
+1. If the user HAS a valid Supabase session, allow all requests to pass through (including /app/*).
+2. If the user does NOT have a valid Supabase session AND the path starts with /app, redirect to /login?next=[original encoded path].
+3. Preserve ALL existing legacy redirects exactly as they are.
+4. Preserve the auth callback route (/auth/callback) — it must remain accessible without auth.
+5. Public routes must remain accessible without auth: /, /login, /onboarding, /pricing, /faq, /how-it-works, /auth/callback, /auth/login.
+6. Do NOT modify any file other than middleware.ts.
+7. Do NOT inspect or read .env files.
+8. Do NOT add new dependencies.
+
+IMPLEMENTATION APPROACH:
+- Use the existing createServerClient from @supabase/ssr (already used in app/auth/callback/route.ts).
+- In the middleware function, FIRST check if the path starts with /app.
+- If it does, create a Supabase server client using request cookies and call supabase.auth.getUser().
+- If getUser() returns no user, redirect to /login?next=[encodeURIComponent(pathname)].
+- If getUser() succeeds (or path doesn't start with /app), fall through to the existing legacy redirect logic.
+- Update the config.matcher to also match /app/* paths (or use a broader matcher). The matcher should cover both the legacy routes AND all /app/* routes.
+
+IMPORTANT EDGE CASES:
+- /app itself (no trailing slash) should be protected.
+- /app/* subroutes should be protected.
+- /auth/callback must NOT be protected (it's the OAuth callback).
+- /login must NOT be protected.
+- /onboarding must NOT be protected.
+- The existing legacy redirects for /app/ideas, /app/examples, /app/product, /app/sales-kit, /app/store, /app/ai-team should still work AFTER the auth check passes.
+
+FILES YOU MAY READ (for reference only):
+- lib/supabase/server.ts (to see how the server client is created)
+- app/auth/callback/route.ts (to see the Supabase server client pattern)
+
+FILES YOU MAY MODIFY:
+- middleware.ts ONLY
+
+After editing, verify your changes are syntactically correct TypeScript.

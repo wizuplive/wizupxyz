@@ -1,0 +1,82 @@
+#!/bin/zsh
+
+set -u
+
+readonly CANONICAL_HOME="/Users/Ira"
+readonly CANONICAL_REPO="/Users/Ira/Desktop/wizup-3.0"
+readonly LOG_DIR="${CANONICAL_REPO}/.hermes-runs"
+readonly FALLBACK_EKKO="/Users/Ira/.local/bin/ekko"
+
+print_help() {
+  cat <<'EOF'
+Usage: wizup-ekko-dispatch PROMPT_FILE
+
+Run an EKKO chat prompt from the canonical WIZUP repo with a stable environment,
+and tee all output to a timestamped log file.
+
+Arguments:
+  PROMPT_FILE   Path to a prompt file to send to EKKO.
+
+Options:
+  -h, --help    Show this help message and exit.
+EOF
+}
+
+if [[ $# -ne 1 ]]; then
+  if [[ $# -eq 1 && ( "$1" == "-h" || "$1" == "--help" ) ]]; then
+    print_help
+    exit 0
+  fi
+
+  print_help >&2
+  exit 1
+fi
+
+PROMPT_FILE="$1"
+
+if [[ "$PROMPT_FILE" == "-h" || "$PROMPT_FILE" == "--help" ]]; then
+  print_help
+  exit 0
+fi
+
+if [[ ! -f "$PROMPT_FILE" ]]; then
+  printf 'Error: prompt file not found: %s\n' "$PROMPT_FILE" >&2
+  exit 1
+fi
+
+export HOME="${CANONICAL_HOME}"
+export PATH="/Users/Ira/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH}"
+
+if command -v ekko >/dev/null 2>&1; then
+  EKKO_BIN="$(command -v ekko)"
+elif [[ -x "${FALLBACK_EKKO}" ]]; then
+  EKKO_BIN="${FALLBACK_EKKO}"
+else
+  printf 'Error: ekko not found on PATH and fallback missing: %s\n' "${FALLBACK_EKKO}" >&2
+  exit 1
+fi
+
+if ! mkdir -p "${LOG_DIR}"; then
+  printf 'Error: failed to create log directory: %s\n' "${LOG_DIR}" >&2
+  exit 1
+fi
+
+if ! cd "${CANONICAL_REPO}"; then
+  printf 'Error: failed to cd to repo: %s\n' "${CANONICAL_REPO}" >&2
+  exit 1
+fi
+
+TIMESTAMP="$(date '+%Y%m%d-%H%M%S')"
+LOG_FILE="${LOG_DIR}/ekko-dispatch-${TIMESTAMP}.log"
+
+printf 'working directory: %s\n' "$(pwd)"
+printf 'prompt file path: %s\n' "${PROMPT_FILE}"
+printf 'log file path: %s\n' "${LOG_FILE}"
+
+set +e
+"${EKKO_BIN}" chat -q "$(cat -- "${PROMPT_FILE}")" -Q --yolo 2>&1 | tee "${LOG_FILE}"
+EKKO_EXIT_CODE=${pipestatus[1]}
+set -e
+
+printf 'EKKO exit code: %s\n' "${EKKO_EXIT_CODE}" | tee -a "${LOG_FILE}"
+exit "${EKKO_EXIT_CODE}"

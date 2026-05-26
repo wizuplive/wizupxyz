@@ -1,0 +1,18 @@
+Audit the /app/sell page against the 'Premium Cinematic SaaS' and 'Product-Builder Cockpit' doctrine.
+
+GOAL:
+Assess the current implementation of the Sell page and identify visual or structural gaps that prevent it from feeling like a premium, professional workspace.
+
+CONSTRAINTS:
+- Do not suggest general 'beautification'.
+- Identify specific violations of:
+  - Visual Hierarchy: Is the sales kit drafting area (Emails, Social Posts, FAQ) the clear focal point?
+  - Professional Utility: Does it feel like a sophisticated copywriting studio or a basic admin form?
+  - Cinematic Depth: Are inputs, cards, and layout using glassmorphism, high-contrast accents, and deep-dark tones?
+  - Flow: Is the transition from the product draft to the sales kit visually cohesive?
+
+EXPECTED OUTPUT:
+1. VERDICT: PASS or FAIL.
+2. TOP 5 VISUAL/PRODUCT GAPS.
+3. SPECIFIC COMPONENT-LEVEL REVISIONS.
+4. EXACT CODEX-READY BRIEF for the rewrite.

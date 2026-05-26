@@ -1,0 +1,39 @@
+Target File: app/app/launch/page.tsx
+Instruction: Rewrite the launch readiness page to enforce the Premium Cinematic SaaS and Product-Builder Cockpit doctrines. Transform it from a flat dashboard into a tactical launch-readiness telemetry screen.
+
+EXECUTION STEPS:
+1. REMOVE FLAT HEADER:
+   - Delete the existing side-by-side header layout.
+   - Implement a massive 'Telemetry Header' as the primary focal point.
+   - Render `readiness.readinessScore` with `text-8xl font-bold tracking-tighter`.
+   - Apply dynamic glow: Text color and text-shadow must map strictly to the score:
+     - < 60: Red (text-red-500, glow-red)
+     - 60-84: Amber (text-amber-500, glow-amber)
+     - >= 85: Emerald (text-emerald-500, glow-emerald)
+   - Display the `verdict` as a prominent, glowing status pill directly beneath the score.
+
+2. DYNAMIC ATMOSPHERE:
+   - Inject a fixed background radial gradient to the page wrapper that shifts its tint based on the `readinessScore` (Crimson -> Amber -> Emerald) to visually reward progress.
+
+3. TACTICAL FLIGHT-CHECK (Checklist):
+   - Rewrite the checklist mapper.
+   - Replace the rounded box look with strict, data-dense tactical rows: `flex items-center justify-between border-b border-white/5 py-4`.
+   - Use `font-mono text-xs uppercase` for status labels (Ready / Needs Work / Missing).
+   - Use a thick left-border accent (`border-l-4`) mapped to the status color.
+
+4. CINEMATIC PREVIEW PANEL:
+   - Redesign the 'Launch preview' section.
+   - Wrap it in a `backdrop-blur-xl bg-black/60 border border-white/10 rounded-2xl p-6 shadow-2xl`.
+   - Add a subtle top inner glare (`shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]`) to simulate a glass screen.
+
+5. ACTIONABLE BLOCKERS (Priority Fixes):
+   - Redesign the 'Priority fixes' card.
+   - If fixes exist, render them as high-urgency alerts: `border-l-4 border-red-500 bg-red-950/20 p-4 rounded-r-lg text-red-200`.
+   - Add visual cues (like a chevron) indicating these are actionable blockers.
+
+CODEX DIRECTIVE:
+- Target file: /Users/Ira/Desktop/wizup-3.0/app/app/launch/page.tsx
+- Maintain all existing state logic, including `readinessFromSession` and `useActiveBuild`.
+- Do not alter the scoring mathematics; only alter the visual presentation.
+- Ensure high-contrast, professional, tactical aesthetic.
+- No new dependencies.

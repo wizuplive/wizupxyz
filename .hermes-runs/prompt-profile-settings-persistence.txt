@@ -1,0 +1,104 @@
+You are implementing Profile and Settings page persistence for the WIZUP codebase.
+
+CURRENT STATE:
+- app/app/profile/page.tsx is a static page with hardcoded data (SJ avatar, sarah@wizup.app, sarahjenkins.co, Austin, TX, etc.)
+- app/app/settings/page.tsx is a static page with hardcoded data (Sarah's Workspace, Productivity, etc.)
+- Neither page has state management or save handlers
+- The profiles table schema (from lib/supabase/types.ts) has: id, email, full_name, onboarding_completed, onboarding_preferences (JSON), created_at, updated_at
+- There is NO separate settings table or extended profile columns
+- The existing pattern for writes is in app/actions/auth.ts (persistOnboardingAnswers uses supabase.from('profiles').update().eq('id', user.id))
+- The existing pattern for reads is in lib/supabase/server.ts (createServerClient with cookies)
+
+CONSTRAINTS:
+- Do NOT modify the database schema (no new tables, no new columns)
+- Do NOT add new npm dependencies
+- Do NOT modify middleware.ts
+- Do NOT modify lib/supabase/server.ts or lib/supabase/client.ts
+- Do NOT modify lib/supabase/types.ts
+- Do NOT inspect or read .env files
+- Store extended profile/settings data in the existing onboarding_preferences JSON column
+
+TASK A — Profile Page (app/app/profile/page.tsx):
+
+1. Convert the page from static to a stateful React component:
+   a. Add 'use client' directive (already present)
+   b. Add useState for each form field: fullName, email (read-only), website, location, bio, displayName, category, audience, focus
+   c. Add useState for loading and error states
+   d. On mount, call a server action to load the user's profile data and populate the form fields
+   e. Replace hardcoded defaultValue="" with state-driven value={state}
+   f. Replace hardcoded defaultValue="sarah@wizup.app" with the loaded user email
+   g. Replace hardcoded defaultValue="sarahjenkins.co" with loaded website
+   h. Replace hardcoded defaultValue="Austin, TX" with loaded location
+   i. Replace hardcoded bio defaultValue with loaded bio
+   j. Replace hardcoded "SJ" initials with dynamic initials from fullName or email
+   k. Replace hardcoded "Pro Creator" badge with dynamic plan from account summary
+   l. Replace hardcoded "May 2026" joined date with dynamic date from created_at
+   m. Replace hardcoded "12" saved projects with a placeholder or remove it
+   n. Wire the "Save changes" button to call a server action that:
+      - Gets the current user via supabase.auth.getUser()
+      - Updates profiles table: set full_name = fullName
+      - Stores extended data (website, location, bio, displayName, category, audience, focus) in onboarding_preferences as a structured JSON object with key "profile"
+      - Returns success/error
+   o. Show a brief success indicator or error message after save
+
+2. The server action should be in a NEW file: app/actions/profile.ts
+   - 'use server' directive
+   - export async function loadProfile() — reads from profiles table, returns { fullName, email, onboardingPreferences }
+   - export async function updateProfile(formData: FormData) — writes to profiles table
+
+TASK B — Settings Page (app/app/settings/page.tsx):
+
+1. Convert the page from static to a stateful React component:
+   a. Add useState for each form field: workspaceName, defaultMarket, defaultProductType, defaultCurrency, theme, languageStyle, writingTone, autoSave
+   b. Add useState for loading and error states
+   c. On mount, call a server action to load settings and populate form fields
+   d. Replace all hardcoded defaultValue props with state-driven values
+   e. Wire the "Save settings" button to call a server action that:
+      - Gets the current user
+      - Stores all settings in onboarding_preferences as a structured JSON object with key "settings"
+      - Returns success/error
+   f. Show a brief success indicator or error message after save
+
+2. The server action should be in the SAME file: app/actions/profile.ts
+   - export async function loadSettings() — reads from profiles table, returns settings from onboarding_preferences
+   - export async function updateSettings(formData: FormData) — writes settings to onboarding_preferences
+
+DATA SHAPE for onboarding_preferences:
+The onboarding_preferences JSON column should store:
+{
+  "profile": {
+    "fullName": "...",
+    "website": "...",
+    "location": "...",
+    "bio": "...",
+    "displayName": "...",
+    "category": "...",
+    "audience": "...",
+    "focus": "..."
+  },
+  "settings": {
+    "workspaceName": "...",
+    "defaultMarket": "...",
+    "defaultProductType": "...",
+    "defaultCurrency": "...",
+    "theme": "dark",
+    "languageStyle": "simple",
+    "writingTone": "clear",
+    "autoSave": true
+  }
+}
+
+When loading, merge with defaults for any missing fields.
+When saving, merge with existing onboarding_preferences to avoid overwriting onboarding data.
+
+FILES YOU MAY MODIFY:
+- app/app/profile/page.tsx
+- app/app/settings/page.tsx
+- app/actions/profile.ts (new file)
+
+FILES YOU MAY READ (for reference):
+- app/actions/auth.ts (see the persistOnboardingAnswers pattern)
+- lib/supabase/server.ts (see the createClient pattern)
+- lib/supabase/types.ts (see ProfileRow, ProfileUpdate interfaces)
+
+Do NOT modify any other files.

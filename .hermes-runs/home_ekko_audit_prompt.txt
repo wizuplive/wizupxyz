@@ -1,0 +1,16 @@
+Audit the redesigned Home page (/app/app/page.tsx) against the 'Premium Cinematic Command Center' doctrine.
+
+CONTEXT:
+- The page was rewritten by Codex to move from a sparse placeholder to a dense, dark-mode cockpit.
+- Layout: Top-left aligned, max-w-7xl, p-8/10.
+- Key Elements: Hero Header, Active Build Cockpit (with pipeline stepper), Quick Actions Grid (3 columns), and Recent Activity placeholder.
+- Aesthetic: Dark mode, purple neon accents, radial gradients, glassmorphic cards.
+
+GOAL:
+Determine if the implementation meets the premium standard. If it passes, confirm. If not, list ONLY the remaining specific visual or structural gaps.
+
+Symmetry check:
+1. Does it feel like a 'product-builder cockpit' or just a themed landing page?
+2. Is the visual hierarchy clear and high-density?
+3. Are the 'neon' and 'cinematic' elements executed with restraint or are they generic?
+4. Is the transition from 'no-session' to 'active-session' handled with premium visual weight?

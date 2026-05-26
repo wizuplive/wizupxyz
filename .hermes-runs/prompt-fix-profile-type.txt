@@ -1,0 +1,33 @@
+Fix a TypeScript build error in app/app/profile/page.tsx.
+
+The error is on line 131:
+  Property 'accountSummary' does not exist on type 'PreferencesEnvelope | {}'.
+
+The issue: `result.onboardingPreferences` is typed as `{}` (empty object) from the server action return type, but the code tries to access `.accountSummary` on it.
+
+TASK: Fix the type casting on lines 129-135 to safely access accountSummary.
+
+Replace lines 129-135:
+```
+      const accountSummary =
+        result.onboardingPreferences &&
+        typeof result.onboardingPreferences.accountSummary === 'object' &&
+        result.onboardingPreferences.accountSummary !== null &&
+        !Array.isArray(result.onboardingPreferences.accountSummary)
+          ? (result.onboardingPreferences.accountSummary as Record<string, unknown>)
+          : {};
+```
+
+With:
+```
+      const rawPreferences = (result.onboardingPreferences ?? {}) as Record<string, unknown>;
+      const accountSummary =
+        rawPreferences.accountSummary &&
+        typeof rawPreferences.accountSummary === 'object' &&
+        rawPreferences.accountSummary !== null &&
+        !Array.isArray(rawPreferences.accountSummary)
+          ? (rawPreferences.accountSummary as Record<string, unknown>)
+          : {};
+```
+
+Do NOT modify any other file. Do NOT change any other lines.

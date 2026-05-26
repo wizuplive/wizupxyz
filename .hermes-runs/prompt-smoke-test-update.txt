@@ -1,0 +1,49 @@
+You are updating the WIZUP Playwright smoke test suite to match the new authentication reality.
+
+CURRENT STATE:
+- tests/smoke.spec.ts has 7 tests that all navigate to /app/* routes without authentication
+- A new auth middleware now redirects unauthenticated /app/* requests to /login?next=[path]
+- The old tests fail because they expect to land on /app pages, but now get redirected to /login
+
+TASK: Rewrite tests/smoke.spec.ts with two test tiers.
+
+TIER A — PUBLIC ROUTE SMOKE (6 tests):
+Test these routes: '/', '/login', '/pricing', '/faq', '/how-it-works', '/onboarding'
+For each route:
+  1. Navigate to the route with waitUntil: 'domcontentloaded'
+  2. Assert response is not null
+  3. Assert response.ok() is true (status 200-299)
+  4. Wait 750ms
+  5. Assert body is visible
+  6. Assert body text length > 80 characters
+  7. Check for disallowed text: 'Maximum update depth', 'Too many re-renders', 'Sarah Jenkins'
+  8. Assert no critical console errors (filter out favicon.ico and ResizeObserver noise)
+  9. Assert no uncaught page errors
+  Do NOT check for guided-flow nav labels on public pages (they don't have the app sidebar).
+
+TIER B — PROTECTED ROUTE REDIRECT SMOKE (7 tests):
+Test these routes: '/app', '/app/find', '/app/create', '/app/sell', '/app/launch', '/app/saved', '/app/team'
+For each route:
+  1. Navigate to the route with waitUntil: 'networkidle' (to let the redirect complete)
+  2. Assert the final URL contains '/login'
+  3. Assert the final URL contains 'next=' with the original path (URL-encoded)
+     Example: navigating to '/app/find' should end at a URL containing 'next=%2Fapp%2Ffind'
+  4. Assert response is not null
+  5. Assert body is visible on the login page
+  6. Assert body text length > 80 characters (login page has content)
+  7. Check for disallowed text: 'Maximum update depth', 'Too many re-renders', 'Sarah Jenkins'
+  8. Assert no critical console errors
+  9. Assert no uncaught page errors
+  Do NOT check for guided-flow nav labels on redirect tests (user is on /login, not in the app).
+
+PRESERVE:
+- The disallowedText array exactly as-is
+- The nonCriticalConsolePatterns array exactly as-is
+- The getCriticalMessages helper function
+- The console error and page error collection pattern
+- The 750ms wait on public tests
+
+MODIFY ONLY:
+- tests/smoke.spec.ts
+
+Do NOT add new dependencies. Do NOT modify any other file.

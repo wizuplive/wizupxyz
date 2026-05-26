@@ -1,0 +1,166 @@
+You are implementing PhotonPay payment integration for the WIZUP codebase.
+
+CRITICAL CONTEXT:
+- PhotonPay API docs are at https://api-doc.photonpay.com/?lang=en but are a JS-rendered SPA
+- The OpenAPI spec cannot be extracted without browser rendering
+- Therefore, you MUST create a safe provider abstraction with clear TODO markers where exact API details are unknown
+- DO NOT invent endpoint paths, auth signatures, or webhook payload structures
+- Use standard payment provider patterns and mark all assumptions clearly
+
+CURRENT STATE:
+- WIZUP is a Next.js 15 + React 19 + TypeScript app
+- Supabase is the database (Postgres)
+- Auth is via Supabase SSR
+- Billing page at app/app/billing/page.tsx is entirely static/hardcoded
+- No payment routes exist yet
+- Existing API routes: app/api/debug/* only
+- Existing actions: app/actions/auth.ts, app/actions/workflow.ts, app/actions/profile.ts, app/actions/ideas.ts
+- lib/env.ts validates env vars with zod (currently only GEMINI_API_KEY, GOOGLE_API_KEY, etc.)
+- lib/supabase/server.ts creates server-side Supabase client
+- lib/supabase/types.ts has Database types
+- middleware.ts protects /app/* routes with auth check
+- tests/smoke.spec.ts has 13 tests (6 public + 7 protected redirects)
+
+CONSTRAINTS:
+- Do NOT modify middleware.ts
+- Do NOT modify lib/supabase/server.ts or lib/supabase/client.ts
+- Do NOT modify lib/supabase/types.ts
+- Do NOT modify app/actions/auth.ts
+- Do NOT modify tests/smoke.spec.ts
+- Do NOT add new npm dependencies
+- Do NOT inspect or read .env files
+- Do NOT expose secrets to client-side code
+- Do NOT run destructive DB operations (CREATE TABLE IF NOT EXISTS is fine)
+- Keep premium WIZUP dark cinematic style (black/charcoal, magenta/purple accents, serif headlines, rounded panels)
+
+TASK 1 — PhotonPay Provider Module (lib/payments/photonpay.ts)
+
+Create a typed provider module that:
+- Reads env vars: PHOTONPAY_API_BASE_URL, PHOTONPAY_MERCHANT_ID, PHOTONPAY_API_KEY, PHOTONPAY_API_SECRET, PHOTONPAY_WEBHOOK_SECRET
+- Has a function isConfigured() that returns true only if all required env vars are present
+- Has a function createCheckoutOrder(params) that:
+  * If not configured, returns { ok: false, error: 'PhotonPay not configured', mock: true }
+  * If configured, TODO: implement actual API call (mark with comment: "VERIFY: endpoint path, auth method, request/response shape from PhotonPay docs")
+  * Returns typed response with orderId, checkoutUrl, expiresAt
+- Has a function verifyWebhookSignature(payload, signature) that:
+  * If not configured, returns false
+  * If configured, TODO: implement actual signature verification (mark with comment: "VERIFY: signature algorithm, header name from PhotonPay docs")
+- Has typed interfaces for: CreateOrderRequest, CreateOrderResponse, WebhookPayload
+- All TODO comments must say exactly: "TODO(photonpay-docs): Verify [specific detail] against official PhotonPay API docs at https://api-doc.photonpay.com/?lang=en"
+
+TASK 2 — Payment Types (lib/payments/types.ts)
+
+Create shared types:
+- PaymentStatus: 'pending' | 'processing' | 'completed' | 'failed' | 'canceled' | 'refunded'
+- SubscriptionStatus: 'inactive' | 'active' | 'past_due' | 'canceled' | 'trialing'
+- CreateCheckoutRequest: { amount: number, currency: string, description: string }
+- CreateCheckoutResponse: { ok: boolean, orderId?: string, checkoutUrl?: string, error?: string, mock?: boolean }
+- WebhookPayload: { orderId: string, status: string, amount: number, currency: string, signature: string }
+
+TASK 3 — Payment Index (lib/payments/index.ts)
+
+Re-export from types and photonpay modules.
+
+TASK 4 — Checkout Route (app/api/payments/photonpay/checkout/route.ts)
+
+Create a POST route that:
+- Requires authenticated user (use lib/supabase/server.ts createClient + getUser)
+- Parses JSON body: { amount: number, currency: string, description: string }
+- Validates: amount > 0, currency is 3-letter code, description is non-empty
+- Creates a pending payment record in Supabase payments table
+- Calls createCheckoutOrder from lib/payments/photonpay.ts
+- If mock mode, returns { ok: true, checkoutUrl: '/billing/mock-checkout?paymentId=xxx', mock: true }
+- If real mode, returns { ok: true, checkoutUrl: response.checkoutUrl }
+- On error, returns { ok: false, error: message }
+- Never exposes secret values
+
+TASK 5 — Webhook Route (app/api/payments/photonpay/webhook/route.ts)
+
+Create a POST route that:
+- Accepts raw body (for signature verification)
+- If PHOTONPAY_WEBHOOK_SECRET is not set:
+  * In production (NODE_ENV === 'production'), return 403 (fail closed)
+  * In development, allow mock webhook processing with X-Mock-Webhook header
+- If configured, verify signature using verifyWebhookSignature
+- Parse webhook payload
+- Check idempotency: query webhook_events table for event_id
+- If already processed, return 200
+- Insert into webhook_events table
+- Update payment status in payments table
+- If payment completed, create or update subscription record
+- Return 200 only after safe processing
+- All webhook payload handling must have TODO(photonpay-docs) comments for payload structure verification
+
+TASK 6 — Success Page (app/billing/success/page.tsx)
+
+Create a public page that:
+- Reads paymentId from search params
+- Shows success message with payment details
+- Has "Go to workspace" button linking to /app
+- Uses WIZUP premium dark cinematic style
+- Handles missing paymentId gracefully
+
+TASK 7 — Cancel Page (app/billing/cancel/page.tsx)
+
+Create a public page that:
+- Shows payment canceled message
+- Has "Try again" button linking to /app/billing
+- Has "Go to workspace" button linking to /app
+- Uses WIZUP premium dark cinematic style
+
+TASK 8 — Update Billing Page (app/app/billing/page.tsx)
+
+Modify the existing billing page to:
+- Add a server component wrapper or use a client component with server action to fetch subscription state
+- Replace hardcoded "$29/mo Pro Creator" with dynamic data:
+  * If user has active subscription: show plan name, price, status, next billing date
+  * If user has no subscription: show "Free plan" with upgrade CTA
+- Add "Start subscription" button that calls the checkout route
+- Add "Manage billing" button for active subscriptions
+- Keep the existing layout, cards, and premium dark cinematic style
+- Keep the usage metrics section (ideas scanned, products created, etc.)
+- Keep the invoices section but add empty state if no invoices
+- Keep the upgrade CTA card
+
+TASK 9 — Supabase Migration (supabase/migrations/20260519000001_payments.sql)
+
+Create a migration file with:
+- payments table: id, user_id, provider, provider_payment_id, provider_order_id, status, amount, currency, description, checkout_url, idempotency_key, raw_event (JSONB), created_at, updated_at
+- subscriptions table: id, user_id, status, plan_id, provider, provider_subscription_id, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at
+- webhook_events table: id, provider, event_id, event_type, payload (JSONB), processed, created_at
+- RLS enabled on all tables
+- Policies: users can view own payments/subscriptions, service can manage all
+- Indexes on user_id, provider_order_id, idempotency_key, event_id
+- Use CREATE TABLE IF NOT EXISTS (non-destructive)
+
+TASK 10 — Env Var Validation (lib/env.ts)
+
+Add optional env vars to the zod schema:
+- PHOTONPAY_API_BASE_URL: z.string().optional()
+- PHOTONPAY_MERCHANT_ID: z.string().optional()
+- PHOTONPAY_API_KEY: z.string().optional()
+- PHOTONPAY_API_SECRET: z.string().optional()
+- PHOTONPAY_WEBHOOK_SECRET: z.string().optional()
+- NEXT_PUBLIC_APP_URL: z.string().optional()
+
+FILES YOU MAY CREATE:
+- lib/payments/photonpay.ts
+- lib/payments/types.ts
+- lib/payments/index.ts
+- app/api/payments/photonpay/checkout/route.ts
+- app/api/payments/photonpay/webhook/route.ts
+- app/billing/success/page.tsx
+- app/billing/cancel/page.tsx
+- supabase/migrations/20260519000001_payments.sql
+
+FILES YOU MAY MODIFY:
+- app/app/billing/page.tsx
+- lib/env.ts
+
+FILES YOU MAY READ (for reference):
+- lib/supabase/server.ts (see createClient pattern)
+- lib/supabase/types.ts (see Database types)
+- app/actions/auth.ts (see server action pattern)
+- middleware.ts (see auth pattern)
+
+Do NOT modify any other files.

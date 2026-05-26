@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from '@/app/actions/auth';
+import { ActiveBuildSessionProvider } from '@/app/context/ActiveBuildSessionContext';
 import { OnboardingSync } from './onboarding-sync';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -61,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <>
+    <ActiveBuildSessionProvider>
       <OnboardingSync />
       <div className="flex h-screen bg-background overflow-hidden relative">
       {/* Sidebar Navigation */}
@@ -210,6 +211,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
     </div>
-    </>
+    </ActiveBuildSessionProvider>
   );
 }

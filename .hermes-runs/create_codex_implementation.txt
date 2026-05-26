@@ -1,0 +1,36 @@
+Rewrite /app/app/create/page.tsx to align with the 'Product-Builder Cockpit' doctrine. Transform the flat form into a premium, interactive modular drafting workspace.
+
+GOAL: Eliminate the 'admin form' feel and replace it with a high-utility, cinematic modular editor.
+
+IMPLEMENTATION STEPS:
+1. REMOVE TEXT-PARSING UX:
+   - Delete the pipe-delimited Textarea for `form.modules`.
+   - Implement a structured `ModuleBuilder` UI: an array of objects in state where users can add/remove/edit individual modules via discrete input fields (title, goal, includedAssets, buyerOutcome).
+
+2. IMPLEMENT DYNAMIC LISTS:
+   - Replace the `keyFeatures`, `proofPoints`, and `buildPlan` textareas with a `DynamicListInput` component.
+   - This component should allow users to add items one-by-one into an array, displaying them as stylized rows/pills rather than a raw block of text.
+
+3. RESTRUCTURE LAYOUT:
+   - Remove the `grid-cols-[1.1fr_0.9fr]` layout.
+   - Transition to a vertical, sectioned 'Focus' layout. Stack the drafting phases vertically with distinct cinematic section breaks:
+     - Section 1: Offer Framing (Title, Subtitle, Promise, Problem Summary, Differentiator, Target Buyer, Category, Price).
+     - Section 2: Proof & Plan (Key Features, Proof Points, Build Plan).
+     - Section 3: Module Architecture (The new ModuleBuilder).
+
+4. APPLY CINEMATIC STYLING:
+   - Update all input wrappers to include: `focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30 transition-all`.
+   - Upgrade cards/panels with: `backdrop-blur-md bg-white/[0.02] border-white/[0.05] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]`.
+   - Ensure a high-contrast, deep-dark aesthetic.
+
+5. UPGRADE PROGRESSION CTA:
+   - Redesign the footer into a full-width 'Phase Complete' cinematic bar.
+   - Implement a glowing primary button: `bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]`.
+   - Integrate the 'Next step' context directly into the button or immediate vicinity.
+
+CODEX DIRECTIVE:
+- Target file: /Users/Ira/Desktop/wizup-3.0/app/app/create/page.tsx
+- Maintain the existing `ActiveBuildSession` context and save logic.
+- Ensure that the state produced by the new modular UI maps correctly to the existing `ProductDraft` interface (convert arrays back to the expected string/array formats if necessary for the save action).
+- No new dependencies.
+- High-density, professional tool identity.

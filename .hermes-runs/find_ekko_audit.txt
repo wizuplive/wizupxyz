@@ -1,0 +1,18 @@
+Audit the /app/find page against the 'Premium Cinematic SaaS' and 'Product-Builder Cockpit' doctrine.
+
+GOAL:
+Assess the current implementation of the 'Find' page and identify visual or structural gaps that prevent it from feeling like a premium, professional tool.
+
+CONSTRAINTS:
+- Do not suggest general 'beautification'.
+- Identify specific violations of:
+  - Visual Hierarchy: Is the search/scan flow dominant and clear?
+  - Data Density: Is the result list too sparse or overly cluttered?
+  - Premium Aesthetics: Are the 'Idea Cards' generic or do they feel cinematic (neon accents, glassmorphism, high-contrast)?
+  - UX Flow: Is the transition from 'Scanning' to 'Reviewing Ideas' to 'Starting Build' visually seamless?
+
+EXPECTED OUTPUT:
+1. VERDICT: PASS or FAIL.
+2. TOP 5 VISUAL/PRODUCT GAPS.
+3. SPECIFIC COMPONENT-LEVEL REVISIONS (e.g., layout changes, styling tweaks).
+4. EXACT CODEX-READY BRIEF for the rewrite.

@@ -1,0 +1,53 @@
+Create a Supabase SQL migration file for the billing schema to support NOWPayments while maintaining PhotonPay compatibility.
+
+1. File to create: `supabase/migrations/20260523000001_nowpayments_schema.sql`
+2. It must safely (`IF NOT EXISTS`) create or update the following tables:
+   - `payments`
+   - `subscriptions`
+   - `webhook_events`
+3. Required columns for `payments`:
+   - id (uuid, primary key, gen_random_uuid)
+   - user_id (uuid, references auth.users(id) on delete cascade)
+   - provider (text, not null)
+   - provider_payment_id (text)
+   - provider_order_id (text)
+   - status (text, default 'pending')
+   - amount (numeric(12,2), not null)
+   - currency (text, not null)
+   - description (text, not null)
+   - checkout_url (text)
+   - idempotency_key (text)
+   - raw_event (jsonb)
+   - req_id (text)
+   - pay_id (text)
+   - auth_code (text)
+   - photonpay_subscription_id (text)
+   - photonpay_product_id (text)
+   - photonpay_price_id (text)
+   - created_at, updated_at (timestamptz)
+4. Required columns for `subscriptions`:
+   - id (uuid, primary key, gen_random_uuid)
+   - user_id (uuid, references auth.users(id) on delete cascade)
+   - status (text, default 'inactive')
+   - plan_id (text, not null)
+   - provider (text, not null)
+   - provider_subscription_id (text)
+   - current_period_start (timestamptz)
+   - current_period_end (timestamptz)
+   - cancel_at_period_end (boolean, default false)
+   - photonpay_subscription_id (text)
+   - created_at, updated_at (timestamptz)
+5. Required columns for `webhook_events`:
+   - id (uuid, primary key, gen_random_uuid)
+   - provider (text, not null)
+   - event_id (text, not null)
+   - event_type (text, not null)
+   - payload (jsonb, not null)
+   - processed (boolean, default false)
+   - created_at (timestamptz)
+6. Add proper indexes (user_id, event_id, idempotency_key, req_id, pay_id).
+7. Enable RLS and add basic select/update policies for users to read/update their own payments and read their subscriptions, plus service_role can manage all.
+8. The entire script must be re-runnable (use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, etc. and use `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN null; END $$;` for policies to avoid conflicts if they already exist from the previous photonpay migration).
+
+After creating this file, run `npx tsc --noEmit` to ensure the project typechecks cleanly.
+Do NOT modify anything else. Do NOT deploy.

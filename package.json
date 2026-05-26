@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "next clean",
+    "test:smoke": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test",
+    "test:smoke:headed": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test --headed"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

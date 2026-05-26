@@ -1,0 +1,19 @@
+Fix 3 visual defects in /app/app/billing/page.tsx identified by EKKO audit.
+
+DEFECT 1 — Typography Drift (HIGH):
+- The "Billing" h1 headline uses font-bold sans-serif instead of font-serif
+- Fix: Replace the h1 className from "text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2" to "font-serif text-3xl lg:text-4xl text-white mb-1 lg:mb-2 tracking-tight"
+
+DEFECT 2 — CTA Color Drift (MEDIUM):
+- The "Start subscription" button in the upgrade panel uses bg-white text-black instead of bg-primary
+- Find the Button in the upgrade/scale-beyond panel that has className containing "bg-white hover:bg-white/90 text-black"
+- Fix: Replace with "bg-primary hover:bg-primary/90 text-primary-foreground"
+
+DEFECT 3 — CTA Height Inconsistency (MEDIUM):
+- Primary buttons have inconsistent heights: h-12 sm:h-10 (header), h-11 sm:h-10 (plan), h-11 sm:h-9 (upgrade)
+- Fix: Standardize ALL primary action buttons on this page to h-11 sm:h-10
+- Specifically:
+  a. The "Manage plan" button in the header: change from "h-12 sm:h-10" to "h-11 sm:h-10"
+  b. The "Start subscription" button in the upgrade panel: change from "h-11 sm:h-9" to "h-11 sm:h-10"
+
+Do NOT modify any other file. Do NOT change any other styling. Only fix these 3 specific defects.

@@ -1,0 +1,39 @@
+Task: Integrate NOWPayments into WIZUP locally using existing env credentials.
+
+Current payment architecture is built around PhotonPay in `lib/payments/`. You need to create a mirroring abstraction for NOWPayments.
+
+Credentials available in .env.local:
+NOWPAYMENTS_API_KEY
+NOWPAYMENTS_IPN_SECRET
+NOWPAYMENTS_API_URL
+
+Implementation Steps:
+1. Create `lib/payments/nowpayments/types.ts`, `client.ts`, and `service.ts` to implement NOWPayments logic. The service should export checkout session creation and webhook verification methods.
+2. Update `lib/payments/types.ts` if needed to accommodate NOWPayments types.
+3. Create new API routes: `app/api/payments/nowpayments/checkout/route.ts` and `app/api/payments/nowpayments/webhook/route.ts`. The webhook MUST verify the IPN using `NOWPAYMENTS_IPN_SECRET` (signature via `x-nowpayments-sig` header, HMAC-SHA512 of sorted keys stringified, according to NOWPayments docs).
+4. Create a component `components/billing/nowpayments-checkout-button.tsx`.
+5. Update `app/app/billing/page.tsx` to conditionally or completely use the `NowPaymentsCheckoutButton` instead of or alongside `PhotonPayCheckoutButton`.
+6. Ensure typescript checking passes on the modified code.
+
+FILES YOU MAY MODIFY:
+- lib/payments/types.ts
+- app/app/billing/page.tsx
+
+FILES YOU MUST CREATE:
+- lib/payments/nowpayments/types.ts
+- lib/payments/nowpayments/client.ts
+- lib/payments/nowpayments/service.ts
+- app/api/payments/nowpayments/checkout/route.ts
+- app/api/payments/nowpayments/webhook/route.ts
+- components/billing/nowpayments-checkout-button.tsx
+
+FILES YOU MAY READ (for reference only):
+- lib/payments/photonpay/types.ts
+- lib/payments/photonpay/client.ts
+- lib/payments/photonpay/service.ts
+- app/api/payments/photonpay/checkout/route.ts
+- app/api/payments/photonpay/webhook/route.ts
+- components/billing/photonpay-checkout-button.tsx
+
+Do NOT modify any other files.
+Do NOT deploy. Do not touch production infra.

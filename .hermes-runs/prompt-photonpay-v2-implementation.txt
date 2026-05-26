@@ -1,0 +1,203 @@
+You are implementing the WIZUP PhotonPay payment integration. This replaces the previous scaffold with the correct PhotonPay API endpoints and authentication scheme.
+
+PHOTONPAY API FACTS (from official docs):
+- Token: POST /oauth2/token/accessToken with Authorization: basic Base64({appId}/{appSecret})
+- Business calls use header: X-PD-TOKEN
+- Signed write calls use header: X-PD-SIGN (MD5withRSA sign of request.body, then Base64 encode)
+- Empty-body GET/query calls do NOT require body signing
+- Subscription checkout: POST /commerce/openApi/v1/subscription/cashierSession
+- One-time checkout: POST /txncore/openApi/v4/cashierSession
+- Query transaction: GET /txncore/openApi/v4/s2sQuery
+- Cashier JS UAT: https://cdn1.uat.photontech.cc/PhotonPay.js
+- Cashier JS Production: https://cdn.photonpay.com/PhotonPay.js
+- Cashier returns to redirectUrl with: status=[canceled/succeed/failed/pending]&reqId={reqId}
+- Webhook uses X-PD-SIGN header + PhotonPay public key verification
+- Webhook headers: X-PD-NOTIFICATION-CATAGORY, X-PD-NOTIFICATION-TYPE
+- Webhook success response: { "roger": true }
+- Payment notification types: sale, auth, capture, refund, void, mit
+- Subscription notification types: subscription.created, subscription.updated, subscription.canceled, subscription.paused, subscription.resumed, subscription.trial_will_end
+
+CURRENT STATE:
+- lib/env.ts has been updated with correct PhotonPay env var names
+- lib/payments/ exists with scaffold from previous pass (needs rewrite)
+- app/api/payments/photonpay/ exists with scaffold (needs rewrite)
+- app/billing/success/ and app/billing/cancel/ exist (may need updates)
+- app/app/billing/page.tsx has dynamic subscription state from previous pass
+- supabase/migrations/20260519000001_payments.sql exists (needs update for PhotonPay fields)
+- No PhotonPay keys in .env.local — code MUST work in mock mode
+
+CONSTRAINTS:
+- Do NOT modify: middleware.ts, lib/supabase/server.ts, lib/supabase/client.ts, lib/supabase/types.ts, app/actions/auth.ts, tests/smoke.spec.ts
+- Do NOT add new npm dependencies
+- Do NOT print or log secret values
+- Do NOT expose server-only values to client components
+- Server-only env vars: PHOTONPAY_APP_ID, PHOTONPAY_APP_SECRET, PHOTONPAY_MERCHANT_PRIVATE_KEY, PHOTONPAY_PLATFORM_PUBLIC_KEY, PHOTONPAY_WEBHOOK_PUBLIC_KEY
+- Public env vars: NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_PHOTONPAY_JS_URL
+- If required live values are missing, fall back to mock/sandbox-safe mode
+- Do NOT fail build just because live payment env is absent
+
+TASK 1 — PhotonPay Types (lib/payments/photonpay/types.ts)
+
+Create typed interfaces:
+- PhotonPayConfig: { apiBaseUrl, appId, appSecret, siteId, merchantPrivateKey, platformPublicKey, webhookPublicKey, defaultCurrency, mode }
+- TokenResponse: { accessToken: string, expiresIn: number }
+- CashierSessionRequest: { amount: number, currency: string, description: string, returnUrl: string, cancelUrl: string, notifyUrl: string, orderId: string }
+- CashierSessionResponse: { reqId: string, authCode: string, payMethod: string, checkoutUrl?: string }
+- WebhookHeaders: { 'x-pd-sign': string, 'x-pd-notification-catagory': string, 'x-pd-notification-type': string }
+- WebhookPayload: { reqId?: string, payId?: string, orderId?: string, status: string, amount?: number, currency?: string, subscriptionId?: string, [key: string]: unknown }
+- PaymentStatus: 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled' | 'expired' | 'suspended'
+- SubscriptionStatus: 'trialing' | 'active' | 'paused' | 'past_due' | 'canceled' | 'terminated' | 'inactive'
+
+TASK 2 — PhotonPay Client (lib/payments/photonpay/client.ts)
+
+Create a PhotonPay API client:
+- Class PhotonPayClient with constructor reading from env
+- Private method generateToken(): POST /oauth2/token/accessToken with Basic auth
+- Token caching in memory with expiration guard (refresh 60s before expiry)
+- Private method signBody(body: string): MD5withRSA sign using merchantPrivateKey, Base64 encode
+- Method getHeaders(token: string, method: string, path: string, body?: string):
+  * Always include X-PD-TOKEN: token
+  * For POST/PUT with body: include X-PD-SIGN: signBody(body)
+  * For GET without body: no X-PD-SIGN
+- Method request<T>(method, path, data?): typed fetch with proper headers
+- Method createSubscriptionCashierSession(params): POST /commerce/openApi/v1/subscription/cashierSession
+- Method createOneTimeCashierSession(params): POST /txncore/openApi/v4/cashierSession
+- Method queryTransaction(reqId): GET /txncore/openApi/v4/s2sQuery?reqId={reqId}
+- Method verifyWebhookSignature(rawBody, signature): verify using platformPublicKey
+- NO secret logging anywhere
+- If merchantPrivateKey is missing for signing, throw descriptive error
+- If platformPublicKey is missing for webhook verification, return false (fail closed)
+
+TASK 3 — PhotonPay Service (lib/payments/photonpay/service.ts)
+
+Create a service layer:
+- Function getPhotonPayClient(): creates client, checks config
+- Function isPhotonPayConfigured(): boolean
+- Function createSubscriptionCashierSession(params):
+  * Validates user is authenticated
+  * Creates local pending payment record in Supabase
+  * Calls PhotonPay createSubscriptionCashierSession
+  * Returns { ok: true, reqId, authCode, payMethod, checkoutUrl }
+  * On missing config: returns mock response with deterministic reqId
+- Function verifyWebhookSignature(rawBody, signature): delegates to client
+- Function normalizePaymentStatus(photonpayStatus: string): PaymentStatus
+  * Maps: succeed→succeeded, pending→pending, failed→failed, canceled→canceled, expired→expired, suspend→suspended
+- Function normalizeSubscriptionStatus(photonpayStatus: string): SubscriptionStatus
+  * Maps: trialing→trialing, active→active, paused→paused, past_due→past_due, canceled→canceled, terminated→terminated
+
+TASK 4 — Checkout Route (app/api/payments/photonpay/checkout/route.ts)
+
+Rewrite the existing route:
+- POST handler
+- Require authenticated Supabase user (createClient + getUser)
+- Parse JSON body: { amount?: number, currency?: string, description?: string }
+- Use defaults: amount=29, currency=USD, description="WIZUP Pro Creator subscription"
+- Validate: amount > 0, currency is 3-letter code
+- Generate idempotency key (UUID)
+- Create local pending payment record in Supabase payments table
+- Call createSubscriptionCashierSession with:
+  * returnUrl: ${NEXT_PUBLIC_APP_URL}/app/billing/success
+  * cancelUrl: ${NEXT_PUBLIC_APP_URL}/app/billing/cancel
+  * notifyUrl: ${NEXT_PUBLIC_APP_URL}/api/payments/photonpay/webhook
+- Update payment record with reqId and status
+- Return { ok: true, reqId, authCode, payMethod, checkoutUrl (if available) }
+- In mock mode: return { ok: true, reqId: mock-uuid, authCode: "mock", payMethod: "mock", mock: true }
+- Never return secrets
+
+TASK 5 — PhotonPay Cashier Button Component (components/billing/photonpay-checkout-button.tsx)
+
+Create a client component:
+- 'use client' directive
+- Props: { amount?: number, currency?: string, description?: string, className?: string }
+- State: loading, error
+- onClick handler:
+  * Set loading=true, error=null
+  * POST to /api/payments/photonpay/checkout with JSON body
+  * On success: load PhotonPay.js script dynamically based on mode (UAT vs production URL)
+  * Open cashier: window.PhotonPay?.payout({ authCode, payMethod }) or equivalent
+  * On error: set error state
+- Render: Button with loading spinner, error message
+- Use WIZUP premium dark cinematic button styling
+- Text: "Subscribe to Pro Creator" or similar
+
+TASK 6 — Webhook Route (app/api/payments/photonpay/webhook/route.ts)
+
+Rewrite the existing route:
+- POST handler
+- Read raw body as text (for signature verification)
+- Extract headers: x-pd-sign, x-pd-notification-catagory, x-pd-notification-type
+- If PHOTONPAY_WEBHOOK_PUBLIC_KEY is missing:
+  * If NODE_ENV === 'production': return 403 (fail closed)
+  * If development: allow with X-Mock-Webhook header for testing
+- Verify signature using verifyWebhookSignature(rawBody, signature)
+- If signature invalid: return 403
+- Parse JSON body
+- Check idempotency: query webhook_events table for event_id (from body or generate from content hash)
+- If already processed: return { "roger": true }
+- Insert into webhook_events table
+- Based on notification type:
+  * Payment (sale/auth/capture): update payment status in payments table
+  * Subscription (created/updated/canceled/paused/resumed): update subscription in subscriptions table
+- Return { "roger": true } only after safe processing
+- Wrap in try/catch: log error, still return 200 to prevent PhotonPay retries (but log for manual review)
+
+TASK 7 — Billing Return Pages
+
+Update app/billing/success/page.tsx (or create app/app/billing/success/page.tsx if routing requires):
+- Read reqId and status from search params
+- Show status-specific message:
+  * succeed: "Payment received. We're confirming your subscription."
+  * pending: "Payment is being processed. We'll update you shortly."
+  * failed: "Payment could not be completed. Please try again."
+  * canceled: "Checkout was canceled."
+- Show "Go to workspace" button → /app
+- Show "Back to billing" button → /app/billing
+- Do NOT treat redirect as final payment truth
+- WIZUP premium dark cinematic style
+
+Update app/billing/cancel/page.tsx (or create app/app/billing/cancel/page.tsx):
+- Show "Checkout was canceled. No charges were made."
+- Show "Try again" button → /app/billing
+- Show "Go to workspace" button → /app
+- WIZUP premium dark cinematic style
+
+NOTE: Check existing routing. If billing pages are under /app/billing, put success/cancel at app/app/billing/success/page.tsx and app/app/billing/cancel/page.tsx. If they're at top-level /billing, use app/billing/success/page.tsx. Match the existing pattern.
+
+TASK 8 — Update Billing Page (app/app/billing/page.tsx)
+
+Update the existing billing page to integrate the PhotonPay checkout button:
+- Import the PhotonPay cashier button component
+- Replace any existing "Start subscription" form/button with the PhotonPay cashier button
+- Keep the dynamic subscription state display from previous pass
+- Keep usage metrics, invoices, upgrade CTA sections
+- Keep WIZUP premium dark cinematic style
+- Add error state display if checkout fails
+
+TASK 9 — Update Supabase Migration
+
+Update supabase/migrations/20260519000001_payments.sql to include PhotonPay-specific fields:
+- Keep existing payments table structure, add: req_id, pay_id, auth_code (if safe), photonpay_subscription_id, photonpay_product_id, photonpay_price_id
+- Keep subscriptions table, add: photonpay_subscription_id, current_period_start, current_period_end
+- Keep webhook_events table, add: event_type
+- All CREATE TABLE IF NOT EXISTS (non-destructive)
+- All RLS policies from previous migration
+
+TASK 10 — Update lib/payments/index.ts
+
+Re-export from the new photonpay modules.
+
+FILES YOU MAY CREATE/MODIFY:
+- lib/payments/photonpay/types.ts (new or overwrite)
+- lib/payments/photonpay/client.ts (new or overwrite)
+- lib/payments/photonpay/service.ts (new or overwrite)
+- lib/payments/types.ts (update)
+- lib/payments/index.ts (update)
+- app/api/payments/photonpay/checkout/route.ts (overwrite)
+- app/api/payments/photonpay/webhook/route.ts (overwrite)
+- components/billing/photonpay-checkout-button.tsx (new)
+- app/app/billing/success/page.tsx (new or update)
+- app/app/billing/cancel/page.tsx (new or update)
+- app/app/billing/page.tsx (update)
+- supabase/migrations/20260519000001_payments.sql (update)
+
+Do NOT modify any other files. Do NOT add new npm dependencies.

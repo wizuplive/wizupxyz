@@ -1,0 +1,59 @@
+You are fixing the idea detail page to use real data from Supabase instead of hardcoded mock data.
+
+CURRENT STATE:
+- app/app/ideas/[id]/page.tsx is entirely hardcoded with mock data for "Minimalist ADHD Planner"
+- The page receives an `id` param but never uses it
+- There is NO loading state, NO error state, NO empty state
+- The ideas table in Supabase has: id, project_id, title, description, ai_metadata (JSON), created_at, updated_at
+- The ai_metadata JSON contains: { opportunity: { id, title, buyer, problem, format, priceRange, opportunityScore, difficulty, verdict, whyNow }, scout: { ... }, savedAt }
+- There is an internal function `getIdeaById(supabase, ideaId)` in app/actions/workflow.ts that queries the ideas table
+
+TASK:
+1. Create a new server action file: app/actions/ideas.ts
+   - 'use server' directive
+   - Import createClient from @/lib/supabase/server
+   - Import type { Json } from @/lib/supabase/types
+   - Export async function getIdeaById(id: string) that:
+     a. Gets the current user via supabase.auth.getUser()
+     b. Queries supabase.from('ideas').select('*').eq('id', id).maybeSingle()
+     c. Returns { error: string | null, idea: { id, title, description, ai_metadata, created_at, updated_at } | null }
+   - Export async function getOpportunityFromMetadata(aiMetadata: Json | null) that:
+     a. Extracts the opportunity object from ai_metadata
+     b. Returns a typed opportunity object with all fields, using empty string defaults for missing fields
+
+2. Rewrite app/app/ideas/[id]/page.tsx:
+   a. Keep the 'use client' directive
+   b. Add 'use server' server action import: import { getIdeaById, getOpportunityFromMetadata } from '@/app/actions/ideas'
+   c. Convert to a stateful component with useState and useEffect
+   d. In useEffect, call getIdeaById(params.id) to fetch the idea
+   e. Add loading state: show a centered loading spinner/message while fetching
+   f. Add error state: show an error message if the idea can't be found or user is not authenticated
+   g. Add empty state: show "Idea not found" with a link back to /app/find
+   h. Replace ALL hardcoded data with dynamic data from the fetched idea:
+      - Title: idea.title
+      - Description: idea.description
+      - Score: opportunity.opportunityScore (default 0)
+      - Verdict: opportunity.verdict (default 'Unknown')
+      - Buyer: opportunity.buyer (default 'Unknown')
+      - Price: opportunity.priceRange (default 'TBD')
+      - Difficulty: opportunity.difficulty (default 'Unknown')
+      - Why this could sell: use opportunity.whyNow or show generic message
+      - Trend data: use static TREND_DATA as fallback (this is acceptable since real trend data may not exist)
+      - What to build: extract from opportunity or show generic placeholder
+      - How to stand out: extract from opportunity or show generic placeholder
+   i. The "Build this product" button should link to /app/create (not /app/product which redirects)
+   j. The "Save idea" button should be a no-op for now (show "Already saved" or similar)
+   k. Keep the same visual layout and styling
+   l. Keep the recharts AreaChart with TREND_DATA as fallback
+
+FILES YOU MAY CREATE:
+- app/actions/ideas.ts (new file)
+
+FILES YOU MAY MODIFY:
+- app/app/ideas/[id]/page.tsx
+
+FILES YOU MAY READ (for reference):
+- app/actions/workflow.ts (see getIdeaById pattern around line 861)
+- lib/supabase/types.ts (see IdeaRow interface)
+
+Do NOT modify any other files. Do NOT add new npm dependencies.

@@ -1,0 +1,27 @@
+Rewrite /app/app/page.tsx into a premium dark-mode cinematic command center based on the EKKO design audit.
+
+GOAL: Transform the sparse placeholder into a 'Command Center Cockpit'.
+
+IMPLEMENTATION STEPS:
+1. LAYOUT: Remove center-aligned 80vh flex layout. Implement a top-left aligned, dense layout: p-8 md:p-10 max-w-7xl mx-auto space-y-12.
+2. HEADER: Bold typography 'Initialize Your Next Product' with a high-authority subtitle: 'Command center for your product empire. Spin up AI-guided builds, explore trending markets, or deploy your drafts.'
+3. ACTIVE BUILD COCKPIT (Conditional on activeSession):
+   - Style: bg-[#0D0D12] border border-white/10 rounded-2xl p-8 relative overflow-hidden.
+   - Visual: Subtle purple radial gradient in top-right corner.
+   - Content: Display activeSession.title and a visual stage indicator (Timeline/Stepper) mapping activeSession.current_stage (Idea -> Validate -> Build -> Launch).
+   - CTA: Purple glow button: bg-purple-600 hover:bg-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.4)] text-white.
+4. QUICK ACTIONS GRID (Always visible):
+   - 3-column grid (grid-cols-1 md:grid-cols-3 gap-6).
+   - Cards: bg-black/50 border border-white/5 hover:border-purple-500/30 hover:bg-white/[0.02] transition-colors.
+   - Action 1: 'Find Market Gaps' -> /app/find
+   - Action 2: 'AI Co-pilot' -> /app/create
+   - Action 3: 'Browse Templates' -> /app/store
+   - Use Lucide-react icons for each.
+5. RECENT BUILDS:
+   - Section header 'Recent Activity'.
+   - Placeholder empty state: 'No archived builds yet. Your deployed products will appear here.'
+
+CODEX DIRECTIVE: 
+- Strict dark mode contrast.
+- No generic Tailwind defaults; use the purple neon premium aesthetic.
+- Target file: /Users/Ira/Desktop/wizup-3.0/app/app/page.tsx

@@ -1,0 +1,18 @@
+Audit the /app/create page against the 'Premium Cinematic SaaS' and 'Product-Builder Cockpit' doctrine.
+
+GOAL:
+Assess the current implementation of the Create page and identify visual or structural gaps that prevent it from feeling like a premium, professional tool.
+
+CONSTRAINTS:
+- Do not suggest general 'beautification'.
+- Identify specific violations of:
+  - Visual Hierarchy: Is the guided flow (the step-by-step product drafting) the dominant focus?
+  - Data Density: Does the drafting interface feel like a professional workspace or a simple form?
+  - Premium Aesthetics: Do the input areas, labels, and buttons feel cinematic (neon accents, glassmorphism, high-contrast)?
+  - UX Flow: Is the transition between drafting modules seamless and visually guided?
+
+EXPECTED OUTPUT:
+1. VERDICT: PASS or FAIL.
+2. TOP 5 VISUAL/PRODUCT GAPS.
+3. SPECIFIC COMPONENT-LEVEL REVISIONS (e.g., layout changes, styling tweaks).
+4. EXACT CODEX-READY BRIEF for the rewrite.

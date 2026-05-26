@@ -1,0 +1,14 @@
+Fix TypeScript build errors in app/app/settings/page.tsx.
+
+The base-ui Select component's onValueChange callback passes (value: string | null, ...), but our useState setters expect string. This causes type errors on every Select in the file.
+
+TASK: Add inline type guards for all onValueChange handlers in settings page.
+
+For EACH `<Select ... onValueChange={setXxx}>` in the file, replace:
+  onValueChange={setXxx}
+with:
+  onValueChange={(value) => setXxx(value ?? '')}
+
+This applies to ALL Select components in the file. There should be approximately 5-6 Select components.
+
+Do NOT modify any other file. Do NOT change any other code.

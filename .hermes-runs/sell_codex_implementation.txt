@@ -1,0 +1,34 @@
+TARGET: /app/app/sell/page.tsx
+GOAL: Rewrite the Sell page to enforce the 'Product-Builder Cockpit' and 'Premium Cinematic SaaS' doctrines. Transform the flat form into a sophisticated copywriting studio.
+
+IMPLEMENTATION STEPS:
+1. LAYOUT OVERHAUL:
+   - Change the layout from a top-header/2-column-grid to a sticky Sidebar + Main Canvas structure.
+   - LEFT SIDEBAR: Create a sticky left column (`lg:w-80 lg:sticky lg:top-8`) that holds the 'Source draft' context (Product Title, Promise, Price, and Format badges). This ensures the user always has their reference material visible while writing.
+   - MAIN CANVAS: The right side should be a wide, focused drafting area.
+
+2. REMOVE PIPE-DELIMITED PARSING:
+   - Eradicate the `splitLines` and `|` parsing hacks for Emails and FAQ.
+   - Transition local state to handle these as arrays of objects during the drafting phase.
+
+3. IMPLEMENT DYNAMIC ARRAY BUILDERS:
+   - Replace `launchEmails` and `faq` textareas with dedicated builder UIs.
+   - Each Email/FAQ item must be its own discrete sub-card (`bg-white/[0.02] border border-white/5 rounded-xl p-4`) containing:
+     - For Emails: Separate `<<InputInput>` for Subject, `<<InputInput>` for Preview, and `<<TextTextarea>` for Body.
+     - For FAQ: Separate `<<InputInput>` for Question and `<<TextTextarea>` for Answer.
+   - Include 'Add Item' and 'Remove Item' actions for each list.
+
+4. CINEMATIC INPUT STYLING:
+   - Upgrade all `<<InputInput>` and `<<TextTextarea>` components: `bg-black/40 border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)] focus:border-primary/40 focus:bg-[#0A0A0B] transition-all`.
+   - Use `backdrop-blur-md` on the sidebars and cards.
+
+5. STICKY COMMAND BAR:
+   - Implement a sticky bottom command bar (`sticky bottom-0 border-t border-white/10 bg-background/80 backdrop-blur-xl z-10`) housing the 'Save and continue' and 'Back' buttons.
+   - The 'Save and continue' button should have a primary glow: `bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]`.
+
+CODEX DIRECTIVE:
+- Target file: /Users/Ira/Desktop/wizup-3.0/app/app/sell/page.tsx
+- Maintain the `ActiveBuildSession` context and save logic.
+- Ensure the final `SalesKit` object produced maps correctly to the expected interface (convert the modular state back to the required format if the backend expects strings, though ideally, use the structured types if they exist in `ActiveBuildSessionContext`).
+- No new dependencies.
+- Professional, high-density copywriting studio identity.

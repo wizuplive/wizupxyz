@@ -1,0 +1,13 @@
+Final Audit of the corrected Home page (/app/app/page.tsx).
+
+GOAL:
+Verify that the previous 'themed landing page' violations have been resolved and that the page now meets the 'Professional Product-Builder Cockpit' standard.
+
+CHECKLIST:
+1. CONDITIONAL HERO: Is the 'Initialize' hero hidden when a session is active?
+2. TYPOGRAPHY: Has the oversized marketing typography been reduced to professional dashboard scales?
+3. COCKPIT LAYOUT: Is the Active Build card restructured into a top row (Title/Status/CTA) and bottom row (Pipeline Stepper)?
+4. BUTTONS: Is the 'Resume Build' button restrained (no heavy outer neon glow)?
+5. DENSITY: Does the page feel like a dense, high-utility tool?
+
+Verdict: PASS or FAIL. If FAIL, list only critical remaining gaps.

@@ -8,6 +8,14 @@ const envSchema = z.object({
   GOOGLE_CLOUD_PROJECT: z.string().optional(),
   GOOGLE_CLOUD_LOCATION: z.string().optional(),
   TAVILY_API_KEY: z.string().optional(),
+
+  // NOWPayments server-only
+  NOWPAYMENTS_API_URL: z.string().optional(),
+  NOWPAYMENTS_API_KEY: z.string().optional(),
+  NOWPAYMENTS_IPN_SECRET: z.string().optional(),
+
+  // Public
+  NEXT_PUBLIC_APP_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

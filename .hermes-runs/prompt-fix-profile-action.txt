@@ -1,0 +1,9 @@
+Fix a build error in app/actions/profile.ts.
+
+The function `getProfileDefaults` on line 336 is exported but is NOT an async function. Next.js requires all exported functions in a 'use server' file to be async (they become Server Actions).
+
+This function is never imported anywhere in the codebase — it is dead code.
+
+TASK: Remove the `getProfileDefaults` function entirely from app/actions/profile.ts (lines 336-341).
+
+Do NOT modify any other file. Do NOT add any new code. Just delete the unused function.

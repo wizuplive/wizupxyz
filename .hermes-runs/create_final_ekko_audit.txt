@@ -1,0 +1,13 @@
+Final Re-Audit of the refactored Create page (/app/app/create/page.tsx).
+
+GOAL:
+Verify that the 'admin form' aesthetic has been replaced with a 'Premium Cinematic Product-Builder Cockpit'.
+
+CHECKLIST:
+1. FOCUS LAYOUT: Is the side-by-side grid gone? Are the drafting phases (Offer, Proof, Modules) stacked vertically in a focused flow?
+2. MODULAR UX: Are raw pipe-delimited textareas replaced by a structured ModuleBuilder and DynamicListInputs?
+3. CINEMATIC DEPTH: Do the panels use glassmorphism (backdrop-blur, bg-white/[0.02]) and the requested inner shadows/border-accents?
+4. INPUT STATES: Do input wrappers have the requested focus-within primary glows?
+5. PHASE CTA: Is there a full-width 'Phase Complete' bar with a glowing primary button and clear 'Next Step' context?
+
+Verdict: PASS or FAIL. If FAIL, list only critical remaining gaps.
