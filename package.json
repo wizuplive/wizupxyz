@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "wizup:generate-visuals": "node scripts/wizup-generate-visuals.mjs",
     "clean": "next clean",
     "test:smoke": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test",
     "test:smoke:headed": "PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers playwright test --headed"
@@ -25,6 +26,7 @@
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "^15.4.9",
+    "openai": "^6.42.0",
     "postcss": "^8.5.6",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
