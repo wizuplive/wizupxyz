@@ -33,7 +33,10 @@ export async function reviewDesignerVariants(input: {
 
   const reviews = await tryGeminiImageReview(input);
   const finalReviews = reviews.length > 0 ? reviews : createInternalFallbackReviews(input.variants);
-  const primary = [...finalReviews].sort((left, right) => right.score - left.score)[0] ?? null;
+  const eligible = finalReviews.filter(
+    (review) => !review.notes.toLowerCase().includes('reject:')
+  );
+  const primary = [...eligible].sort((left, right) => right.score - left.score)[0] ?? null;
 
   return {
     status: primary ? 'awaiting_approval' : 'failed',
@@ -98,6 +101,8 @@ async function tryGeminiImageReview(input: {
         textSafety: number;
         composition: number;
         productRelevance: number;
+        shouldReject?: boolean;
+        rejectReason?: string;
         notes: string;
       }>;
     };
@@ -116,9 +121,11 @@ async function tryGeminiImageReview(input: {
         };
         acc.push({
           variantId: variant.id,
-          score: totalFromBreakdown(scoreBreakdown),
+          score: review.shouldReject ? 0 : totalFromBreakdown(scoreBreakdown),
           scoreBreakdown,
-          notes: review.notes,
+          notes: review.shouldReject
+            ? `Reject: ${review.rejectReason ?? review.notes}`
+            : review.notes,
           source: 'gemini' as const,
           internalOnly: false,
         });
@@ -150,23 +157,20 @@ function createInternalFallbackReviews(
   variants: DesignerAssetVariant[]
 ): DesignerVariantReview[] {
   return variants.map((variant, index) => {
-    const widthSignal = variant.width && variant.width >= 1024 ? 86 : 74;
-    const heightSignal = variant.height && variant.height >= 1024 ? 84 : 73;
-    const primaryBias = Math.max(0, 3 - index);
     const scoreBreakdown: DesignerAssetScoreBreakdown = {
-      brandFit: widthSignal + primaryBias,
-      clarity: 78 + primaryBias,
-      premiumFeel: heightSignal + primaryBias,
-      textSafety: 82,
-      composition: 79 + primaryBias,
-      productRelevance: 80 + primaryBias,
+      brandFit: 0,
+      clarity: 0,
+      premiumFeel: 0,
+      textSafety: 0,
+      composition: 0,
+      productRelevance: 0,
     };
 
     return {
       variantId: variant.id,
-      score: totalFromBreakdown(scoreBreakdown),
+      score: 0,
       scoreBreakdown,
-      notes: 'Internal fallback review used because LLM image review was unavailable.',
+      notes: `Reject: Visual QA unavailable for variant ${index + 1}.`,
       source: 'internal',
       internalOnly: true,
     };
@@ -182,8 +186,13 @@ function buildReviewPrompt(input: {
     'Review these WIZUP product image variants.',
     `Asset type: ${input.asset.type}`,
     `Context: ${input.contextSummary}`,
+    `Active product title: ${input.asset.contextSnapshot?.productTitle ?? 'Unknown product'}`,
+    `Active audience: ${input.asset.contextSnapshot?.targetBuyer ?? 'Unknown audience'}`,
+    `Active price: ${input.asset.contextSnapshot?.pricing ?? 'Unknown price'}`,
+    `Active deliverables: ${input.asset.contextSnapshot?.deliverables.join(', ') || 'Unknown deliverables'}`,
     'Score each variant from 0 to 100 for brandFit, clarity, premiumFeel, textSafety, composition, and productRelevance.',
-    'Return JSON only in the shape {"reviews":[{"variantIndex":0,"brandFit":0,"clarity":0,"premiumFeel":0,"textSafety":0,"composition":0,"productRelevance":0,"notes":"..."}]}.',
+    'Reject any variant that contains misspelled text, old product wording, unreadable fake copy, or visuals that misrepresent the current offer.',
+    'Return JSON only in the shape {"reviews":[{"variantIndex":0,"brandFit":0,"clarity":0,"premiumFeel":0,"textSafety":0,"composition":0,"productRelevance":0,"shouldReject":false,"rejectReason":"","notes":"..."}]}.',
   ].join('\n');
 }
 

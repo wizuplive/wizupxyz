@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   CheckCircle2,
-  Lightbulb,
+  LineChart,
+  Sparkles,
   Search,
   SlidersHorizontal,
+  TrendingUp,
 } from 'lucide-react';
 
 import { listSavedIdeas, saveScoutIdea, scoutTopic, type SavedIdea } from '@/app/actions/workflow';
@@ -20,10 +22,11 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 const starterTopics = [
-  'ADHD planning',
-  'local business marketing',
-  'new parent routines',
-  'freelance client systems',
+  'All Ideas',
+  'High Momentum',
+  'Fast Growing',
+  'Low Competition',
+  'Evergreen',
 ];
 
 function toSelectedIdea(idea: ScoutOpportunity | SavedIdea): SelectedIdea {
@@ -54,51 +57,61 @@ function IdeaCard({
   isSaving?: boolean;
   isSaved?: boolean;
 }) {
+  const score = idea.opportunityScore ?? 72;
+  const isScoutIdea = 'problem' in idea;
+  const competition = idea.difficulty?.toLowerCase().includes('easy') ? 'Low' : idea.difficulty || 'Medium';
+  const revenue = idea.priceRange ? `${idea.priceRange} / sale` : '$19 - $49 / sale';
+
   return (
-    <Card className="group relative flex flex-col border-white/10 bg-gradient-to-br from-white/[0.03] to-transparent p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-[0_10px_40px_-15px_rgba(var(--primary),0.2)]">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="border-amber-500/20 bg-amber-500/10 text-amber-300">
-              {idea.verdict}
+    <Card className="group relative flex min-h-[360px] flex-col overflow-hidden rounded-2xl border-white/[0.09] bg-[linear-gradient(145deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025)_44%,rgba(8,8,14,0.92))] p-6 shadow-[0_28px_90px_-58px_rgba(217,70,239,0.85)] backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:border-fuchsia-300/25 hover:shadow-[0_34px_110px_-56px_rgba(217,70,239,0.95)]">
+      <div className="absolute inset-x-10 -top-16 h-32 bg-fuchsia-400/16 blur-3xl transition-opacity duration-500 group-hover:opacity-90" />
+      <div className="relative mb-6 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="rounded-full border-fuchsia-300/20 bg-fuchsia-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-fuchsia-100">
+              {isScoutIdea ? 'Market Signal' : 'Saved Signal'}
             </Badge>
-            <Badge variant="outline" className="border-white/10 bg-white/5 text-white/70">
-              {idea.difficulty}
+            <Badge variant="outline" className="rounded-full border-white/[0.08] bg-white/[0.045] px-3 py-1 text-[10px] text-white/62">
+              {idea.verdict || 'Buyer Demand Rising'}
             </Badge>
           </div>
-          <h2 className="text-lg font-medium text-white">{idea.title}</h2>
+          <h2 className="text-2xl font-semibold leading-tight tracking-[-0.03em] text-white">{idea.title}</h2>
         </div>
-        <div className="font-mono text-2xl font-bold text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.4)]">
-          {idea.opportunityScore ?? 0}/100
+        <div className="relative flex h-18 w-18 shrink-0 items-center justify-center rounded-full border border-fuchsia-300/20 bg-black/35 shadow-[inset_0_0_24px_rgba(217,70,239,0.18),0_0_24px_-10px_rgba(217,70,239,0.8)]">
+          <div className="absolute inset-1 rounded-full border-4 border-fuchsia-400/70 border-b-fuchsia-400/10 border-l-fuchsia-400/25" />
+          <div className="text-center">
+            <div className="text-xl font-semibold text-white">{score}</div>
+            <div className="text-[9px] text-white/45">demand</div>
+          </div>
         </div>
       </div>
 
-      <p className="mb-5 text-sm leading-relaxed text-white/68">
-        {'problem' in idea ? idea.problem : idea.description}
+      <p className="relative mb-6 text-sm leading-7 text-white/64">
+        {isScoutIdea ? idea.problem : idea.description}
       </p>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <div className="relative mb-6 grid grid-cols-2 gap-3 text-sm">
+        <MiniStat label="Growth momentum" value={idea.whyNow || 'Demand is rising'} />
+        <MiniStat label="Competition" value={competition} />
         <MiniStat label="Buyer" value={idea.buyer} />
-        <MiniStat label="Format" value={idea.format} />
-        <MiniStat label="Price" value={idea.priceRange} />
-        <MiniStat label="Why now" value={idea.whyNow} />
+        <MiniStat label="Revenue estimate" value={revenue} />
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="relative mt-auto flex flex-col gap-2 sm:flex-row">
         <Button
           onClick={() => onCreate(idea)}
-          className="flex-1 bg-primary/90 text-primary-foreground shadow-[0_0_0_rgba(var(--primary),0)] transition-all duration-300 group-hover:bg-primary group-hover:shadow-[0_0_24px_-6px_rgba(var(--primary),0.65)]"
+          className="h-12 flex-1 rounded-xl bg-fuchsia-500 text-white shadow-[0_0_26px_-10px_rgba(217,70,239,0.9)] transition-all duration-300 hover:bg-fuchsia-400"
         >
-          Create this product
+          View opportunity
           <ArrowRight className="h-4 w-4" />
         </Button>
-        {'problem' in idea && onSave ? (
+        {isScoutIdea && onSave ? (
           <Button
             type="button"
             variant="outline"
             disabled={isSaving || isSaved}
             onClick={() => onSave(idea)}
-            className="border-white/10 bg-white/[0.02] text-white/90 transition-all duration-300 hover:bg-white/10 group-hover:border-primary/25 group-hover:bg-primary/[0.08] group-hover:text-white"
+            className="h-12 rounded-xl border-white/[0.09] bg-white/[0.035] text-white/82 transition-all duration-300 hover:border-fuchsia-300/20 hover:bg-fuchsia-400/[0.08] hover:text-white"
           >
             {isSaving ? (
               <InlineSpinner label="Saving" />
@@ -119,9 +132,9 @@ function IdeaCard({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col justify-center rounded-md border border-white/5 bg-black/20 px-3 py-2 backdrop-blur-md">
-      <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.2em] text-white/40">{label}</p>
-      <p className="text-sm font-medium text-white/90">{value || 'Not set'}</p>
+    <div className="flex min-h-20 flex-col justify-center rounded-xl border border-white/[0.07] bg-black/24 px-3.5 py-3 backdrop-blur-md">
+      <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.13em] text-white/38">{label}</p>
+      <p className="line-clamp-2 text-sm font-medium leading-5 text-white/88">{value || 'Not set'}</p>
     </div>
   );
 }
@@ -228,20 +241,46 @@ export default function FindPage() {
   }
 
   return (
-    <div className="mx-auto flex h-full max-w-7xl flex-col p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8">
-      <div className="mb-6 flex flex-col gap-3 lg:mb-8">
-        <div>
-          <h1 className="mb-2 text-2xl font-medium text-white sm:text-3xl">
-            Find an idea worth building
+    <div className="mx-auto flex h-full max-w-7xl flex-col px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <section className="relative mb-8 overflow-hidden rounded-[1.75rem] border border-white/[0.08] bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(255,255,255,0.025)_38%,rgba(6,6,12,0.92))] p-5 shadow-[0_34px_120px_-72px_rgba(217,70,239,0.95)] backdrop-blur-2xl sm:p-8 lg:p-10">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_18%,rgba(217,70,239,0.22),transparent_30%),radial-gradient(circle_at_48%_0%,rgba(124,58,237,0.16),transparent_34%)]" />
+        <div className="absolute right-0 top-4 hidden h-72 w-[58%] opacity-80 lg:block">
+          <svg viewBox="0 0 720 280" className="h-full w-full overflow-visible">
+            <defs>
+              <linearGradient id="trendFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#d946ef" stopOpacity="0.34" />
+                <stop offset="100%" stopColor="#d946ef" stopOpacity="0" />
+              </linearGradient>
+              <filter id="trendGlow">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <path d="M10 220 C70 224 88 180 145 182 C184 184 192 150 236 154 C282 160 292 112 340 122 C384 132 402 96 440 96 C480 96 492 70 532 82 C570 94 588 42 626 58 C666 74 678 30 710 22 L710 280 L10 280 Z" fill="url(#trendFill)" />
+            <path d="M10 220 C70 224 88 180 145 182 C184 184 192 150 236 154 C282 160 292 112 340 122 C384 132 402 96 440 96 C480 96 492 70 532 82 C570 94 588 42 626 58 C666 74 678 30 710 22" fill="none" stroke="#d946ef" strokeWidth="3" filter="url(#trendGlow)" />
+            {[145,236,340,440,532,626,710].map((x, index) => (
+              <circle key={x} cx={x} cy={[182,154,122,96,82,58,22][index]} r="5" fill="#f5d0fe" filter="url(#trendGlow)" />
+            ))}
+          </svg>
+        </div>
+        <div className="relative max-w-2xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-fuchsia-300/18 bg-fuchsia-400/[0.08] px-3 py-1.5 text-xs font-medium text-fuchsia-100">
+            <TrendingUp className="h-3.5 w-3.5" />
+            Buyer demand is already moving
+          </div>
+          <h1 className="mb-5 max-w-2xl text-4xl font-semibold leading-[0.98] tracking-[-0.055em] text-white sm:text-5xl lg:text-6xl">
+            Discover market opportunities
           </h1>
-          <p className="text-base text-white/65 lg:text-lg">
-            Scout fresh opportunities or reopen saved ideas, then move directly into the guided build flow.
+          <p className="mb-8 max-w-xl text-base leading-7 text-white/66 sm:text-lg">
+            Find products people are already searching for. Start with a niche, a problem, or a group of buyers.
           </p>
         </div>
-      </div>
 
       {activeSession?.selected_idea ? (
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-white/10 border-l-4 border-l-primary bg-primary/5 px-4 py-3 backdrop-blur-md">
+        <div className="relative mb-6 flex items-center justify-between rounded-2xl border border-fuchsia-300/18 bg-fuchsia-400/[0.08] px-4 py-3 backdrop-blur-md">
           <div className="min-w-0">
             <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-primary/85">Active session</p>
             <h2 className="truncate text-sm font-medium text-white">{activeSession.selected_idea.title}</h2>
@@ -259,14 +298,14 @@ export default function FindPage() {
         </div>
       ) : null}
 
-      <form onSubmit={handleScan} className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row">
+      <form onSubmit={handleScan} className="relative mb-4 flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/42" />
           <Input
             value={topic}
             onChange={(event) => setTopic(event.target.value)}
-            placeholder="Search a niche, buyer problem, or market..."
-            className="h-14 w-full rounded-xl border-white/10 bg-black/40 pl-12 text-lg shadow-inner transition-colors focus-visible:border-primary/50 focus-visible:ring-1 focus-visible:ring-primary/50"
+            placeholder="Search niches, problems, or product ideas..."
+            className="h-16 w-full rounded-2xl border-white/[0.09] bg-black/42 pl-14 text-base text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_0_0_rgba(217,70,239,0)] transition-all duration-300 placeholder:text-white/35 focus-visible:border-fuchsia-300/35 focus-visible:ring-2 focus-visible:ring-fuchsia-400/22 focus-visible:shadow-[0_0_38px_-18px_rgba(217,70,239,0.9)] sm:text-lg"
           />
         </div>
         <div className="flex gap-3">
@@ -274,7 +313,7 @@ export default function FindPage() {
             type="button"
             size="lg"
             variant="outline"
-            className="h-14 flex-1 gap-2 border-white/10 bg-black/30 px-4 text-white/80 backdrop-blur-md hover:bg-white/5 hover:text-white sm:flex-none lg:px-6"
+            className="h-16 flex-1 gap-2 rounded-2xl border-white/[0.09] bg-black/30 px-4 text-white/80 backdrop-blur-md hover:bg-white/[0.06] hover:text-white sm:flex-none lg:px-6"
           >
             <SlidersHorizontal className="h-5 w-5" />
             <span className="hidden sm:inline">Filters</span>
@@ -283,25 +322,31 @@ export default function FindPage() {
             type="submit"
             size="lg"
             disabled={isScanning}
-            className="h-14 flex-1 px-8 font-bold tracking-wide shadow-[0_0_15px_-3px_rgba(var(--primary),0.3)] hover:shadow-[0_0_20px_-3px_rgba(var(--primary),0.5)] sm:flex-none"
+            className="h-16 flex-1 rounded-2xl bg-fuchsia-500 px-8 font-semibold text-white shadow-[0_0_32px_-12px_rgba(217,70,239,0.95)] transition-all hover:bg-fuchsia-400 hover:shadow-[0_0_42px_-10px_rgba(217,70,239,1)] sm:flex-none"
           >
-            {isScanning ? <InlineSpinner label="Scanning" /> : 'Scan market'}
+            {isScanning ? <InlineSpinner label="Scanning" /> : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Scan Market
+              </>
+            )}
           </Button>
         </div>
       </form>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+      <div className="relative flex gap-2 overflow-x-auto pb-1">
         {starterTopics.map((value) => (
           <button
             key={value}
             type="button"
-            onClick={() => setTopic(value)}
-            className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            onClick={() => value === 'All Ideas' ? setTopic('') : setTopic(value.toLowerCase())}
+            className="shrink-0 rounded-full border border-white/[0.09] bg-white/[0.045] px-4 py-2 text-xs font-medium text-white/70 transition-all hover:border-fuchsia-300/22 hover:bg-fuchsia-400/[0.09] hover:text-white"
           >
             {value}
           </button>
         ))}
       </div>
+      </section>
 
       <div className="mb-5 space-y-3">
         {error ? <WorkflowNotice tone="error">{error}</WorkflowNotice> : null}
@@ -311,11 +356,11 @@ export default function FindPage() {
 
       {scan ? (
         <section className="mb-8">
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-md sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5 backdrop-blur-md sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                  Scout
+                  Market Scan
                 </Badge>
                 <AiSourceBadge source={scan.source} fallbackReason={scan.fallbackReason} />
               </div>
@@ -340,8 +385,8 @@ export default function FindPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-medium text-white">Saved ideas</h2>
-            <p className="text-sm text-white/60">Use existing research as the starting point for Create.</p>
+            <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">Saved ideas</h2>
+            <p className="text-sm text-white/58">Return to signals you want to explore.</p>
           </div>
           <Badge variant="outline" className="border-white/10 bg-white/5 text-white/70">
             {savedIdeas.length} saved
@@ -349,17 +394,17 @@ export default function FindPage() {
         </div>
 
         {isLoadingIdeas ? (
-          <Card className="border-white/10 bg-white/[0.03] p-8 text-center text-sm text-white/60 backdrop-blur-md">
+          <Card className="rounded-2xl border-white/[0.08] bg-white/[0.035] p-8 text-center text-sm text-white/60 backdrop-blur-md">
             Loading saved ideas...
           </Card>
         ) : savedIdeas.length === 0 ? (
-          <Card className="border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-md">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Lightbulb className="h-6 w-6 text-primary" />
+          <Card className="rounded-2xl border-white/[0.08] bg-white/[0.035] p-8 text-center backdrop-blur-md">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-fuchsia-400/10">
+              <LineChart className="h-6 w-6 text-fuchsia-200" />
             </div>
             <h2 className="mb-2 text-lg font-medium text-white">No saved ideas yet</h2>
             <p className="mx-auto max-w-lg text-sm leading-relaxed text-white/60">
-              Run a Scout scan above, save the ideas you want to keep, then reopen them here to start the guided build.
+              Scan a market, save the signals you want to keep, then come back when you are ready to build.
             </p>
           </Card>
         ) : (

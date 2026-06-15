@@ -4,10 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition
 import Link from 'next/link';
 import {
   ArrowRight,
-  Check,
+  Check as CheckIcon,
   ChevronDown,
   Circle,
-  Copy,
   ExternalLink,
   FileText,
   Hammer,
@@ -321,12 +320,12 @@ const workflowVisualAssetTypes: DesignerAssetType[] = [
 const visualStatusCopy = {
   pending: 'Visuals not generated yet.',
   idle: 'Visuals not generated yet.',
-  queued_for_codex: 'Visual request queued. Generate with Codex, then approve assets.',
+  queued_for_codex: 'Image provider not connected.',
   generating: 'Designer is creating visuals...',
   running: 'Designer is creating visuals...',
   awaiting_approval: 'Visuals waiting for approval.',
   failed: 'Designer could not generate visuals. Try again.',
-  approved: 'Founder approved this visual.',
+  approved: 'Visual ready.',
   rejected: 'Founder rejected this visual.',
 } as const;
 
@@ -349,7 +348,7 @@ function createSessionDesignerState(
     message:
       overrides.message ??
       (status === 'ready'
-        ? 'Founder approved this visual.'
+        ? 'Visual ready.'
         : visualStatusCopy[status] ?? null),
     rowId: overrides.rowId ?? null,
     reviewerScore: overrides.reviewerScore ?? null,
@@ -456,7 +455,7 @@ function getDesignerStatusBadge(status: SessionDesignerAssetState['status']) {
     case 'awaiting_approval':
       return 'Awaiting approval';
     case 'queued_for_codex':
-      return 'Queued for Codex';
+      return 'Provider offline';
     case 'running':
     case 'generating':
       return 'Running';
@@ -473,7 +472,7 @@ function getDesignerPreviewFallback(status: SessionDesignerAssetState['status'])
     case 'awaiting_approval':
       return 'Review required';
     case 'queued_for_codex':
-      return 'Queued for Codex';
+      return 'Provider offline';
     case 'running':
     case 'generating':
       return 'Generating visual';
@@ -493,7 +492,7 @@ function getDesignerApprovalLabel(status: SessionDesignerAssetState['status']) {
     case 'awaiting_approval':
       return 'Founder review required';
     case 'queued_for_codex':
-      return 'Queued for Codex';
+      return 'Provider offline';
     case 'running':
     case 'generating':
       return 'Designer working';
@@ -590,7 +589,6 @@ function DesignerVisualControl({
   failedCount,
   imageGenerationMode,
   canGenerateInRuntime,
-  onRefreshAssets,
   onGenerate,
   onFounderAction,
 }: {
@@ -607,14 +605,12 @@ function DesignerVisualControl({
   failedCount: number;
   imageGenerationMode: 'codex-assisted' | 'runtime-provider';
   canGenerateInRuntime: boolean;
-  onRefreshAssets: () => void;
   onGenerate: () => void;
   onFounderAction: (
     assetType: DesignerAssetType,
     action: 'approve' | 'reject'
   ) => void;
 }) {
-  const [copiedCommand, setCopiedCommand] = useState(false);
   const hasAwaitingApproval = visualStates.some(
     ({ state }) => state.status === 'awaiting_approval'
   );
@@ -624,19 +620,16 @@ function DesignerVisualControl({
   const hasQueuedAssets = visualStates.some(
     ({ state }) => state.status === 'queued_for_codex'
   );
-  const codexCommand = activeSession?.id
-    ? `npm run wizup:generate-visuals -- --session ${activeSession.id} --asset-dir <local_asset_folder>`
-    : null;
-
-  const handleCopyCommand = async () => {
-    if (!codexCommand || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(codexCommand);
-    setCopiedCommand(true);
-    window.setTimeout(() => setCopiedCommand(false), 1800);
-  };
+  const runtimeReady = imageGenerationMode === 'runtime-provider' && canGenerateInRuntime;
+  const statusMessage = hasRunningAssets
+    ? visualStatusCopy.running
+    : hasAwaitingApproval
+      ? visualStatusCopy.awaiting_approval
+      : !runtimeReady
+        ? 'Image provider not connected.'
+      : hasQueuedAssets
+        ? visualStatusCopy.queued_for_codex
+        : visualStatusCopy.idle;
 
   return (
     <div className="rounded-[1.6rem] border border-white/[0.075] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.022)_52%,rgba(0,0,0,0.22))] p-5 shadow-[0_30px_90px_-68px_rgba(217,70,239,0.82)] backdrop-blur-xl sm:p-6">
@@ -768,79 +761,24 @@ function DesignerVisualControl({
         <DetailCard label="Generation mode" value={imageGenerationMode} />
         <DetailCard
           label="Runtime generation"
-          value={canGenerateInRuntime ? 'Available' : 'Not available'}
+          value={runtimeReady ? 'Available' : 'Not available'}
         />
         <DetailCard label="Queued assets" value={`${queuedCount}`} />
         <DetailCard label="Completed assets" value={`${completedCount}`} />
         <DetailCard label="Failed assets" value={`${failedCount}`} />
       </div>
 
-      {imageGenerationMode === 'codex-assisted' ? (
-        <div className="mt-5 rounded-2xl border border-white/[0.065] bg-black/18 p-4">
-          <p className="text-sm font-medium text-white">
-            {hasQueuedAssets
-              ? 'Queued for Codex — run local visual generator.'
-              : 'Codex-assisted generation is enabled for this session.'}
-          </p>
-          <p className="mt-1 text-xs leading-5 text-white/48">
-            Run the local generator on this machine, then refresh assets to load uploaded image URLs into Build.
-          </p>
-          <div className="mt-3 rounded-xl border border-white/[0.08] bg-black/22 px-3 py-3">
-            <code className="block overflow-x-auto text-xs text-fuchsia-100/82">
-              {codexCommand ??
-                'npm run wizup:generate-visuals -- --session <session_id> --asset-dir <local_asset_folder>'}
-            </code>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCopyCommand}
-              disabled={!codexCommand}
-              className="h-9 rounded-xl border-white/[0.08] bg-white/[0.03] px-3 text-sm text-white hover:bg-white/[0.06]"
-            >
-              {copiedCommand ? (
-                <>
-                  Copied
-                  <Check className="h-3.5 w-3.5" />
-                </>
-              ) : (
-                <>
-                  Copy command
-                  <Copy className="h-3.5 w-3.5" />
-                </>
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onRefreshAssets}
-              disabled={!activeSession?.id || isPending}
-              className="h-9 rounded-xl border-white/[0.08] bg-white/[0.03] px-3 text-sm text-white hover:bg-white/[0.06]"
-            >
-              Refresh assets
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
       <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/[0.065] bg-black/18 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-white">Visual creation status</p>
           <p className="mt-1 text-xs leading-5 text-white/48">
-            {hasRunningAssets
-              ? visualStatusCopy.running
-              : hasQueuedAssets
-                ? visualStatusCopy.queued_for_codex
-              : hasAwaitingApproval
-                ? visualStatusCopy.awaiting_approval
-                : visualStatusCopy.idle}
+            {statusMessage}
           </p>
         </div>
         <Button
           type="button"
           onClick={onGenerate}
-          disabled={isPending || hasRunningAssets || hasQueuedAssets || !activeSession?.id}
+          disabled={isPending || hasRunningAssets || !runtimeReady || !activeSession?.id}
           className="h-11 rounded-xl bg-fuchsia-500 px-4 text-sm font-semibold text-white hover:bg-fuchsia-400"
         >
           Generate visuals
@@ -922,7 +860,7 @@ function BuildProgressPath({
               }`}
             >
               {step.status === 'done' ? (
-                <Check className="h-4 w-4" />
+                <CheckIcon className="h-4 w-4" />
               ) : (
                 <Circle
                   className={`h-3.5 w-3.5 ${
@@ -1010,7 +948,7 @@ function BlueprintRow({ title, text, open }: { title: string; text: string; open
 
 function TeamStatus({ status }: { status: string }) {
   if (status === 'completed') {
-    return <Check className="h-3.5 w-3.5 text-fuchsia-100" />;
+    return <CheckIcon className="h-3.5 w-3.5 text-fuchsia-100" />;
   }
 
   if (status === 'working') {
@@ -1240,6 +1178,21 @@ export default function BuildPage() {
         reviewerScores.reduce((sum, score) => sum + score, 0) / reviewerScores.length
       )}`
     : 'Not scored';
+
+  useEffect(() => {
+    if (!activeSession?.id || !hasRunningAssets) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshDesignerAssets(activeSession);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [activeSession, hasRunningAssets, refreshDesignerAssets]);
+
   const updateAssetState = (
     session: BuildSession,
     assetType: DesignerAssetType,
@@ -1267,12 +1220,21 @@ export default function BuildPage() {
         stage: 'generate_visuals:clicked',
         sessionId: activeSession.id,
         assetCount: workflowVisualAssetTypes.length,
+        imageGenerationMode: designerRuntimeState.imageGenerationMode,
       });
+      if (
+        designerRuntimeState.imageGenerationMode !== 'runtime-provider' ||
+        !designerRuntimeState.canGenerateInRuntime
+      ) {
+        return;
+      }
+
+      const initialStatus = 'generating';
       for (const assetType of workflowVisualAssetTypes) {
         sessionSnapshot = updateAssetState(
           sessionSnapshot,
           assetType,
-          createSessionDesignerState(assetType, 'generating')
+          createSessionDesignerState(assetType, initialStatus)
         );
       }
 
@@ -1296,6 +1258,7 @@ export default function BuildPage() {
               differentiator: draft.differentiator,
               pricing: draft.recommendedPrice,
               brandDirection: framework.brand.visual,
+              deliverables: framework.deliverables.map((item) => item.title),
               mode: 'production',
               sourceContext: {
                 creatorSummary: framework.summary,
@@ -1317,8 +1280,8 @@ export default function BuildPage() {
           const nextStatus =
             workflow.asset.status === 'ready' && readyPointer
               ? 'ready'
-              : workflow.asset.status === 'queued_for_codex'
-                ? 'queued_for_codex'
+              : workflow.asset.status === 'generating' || workflow.asset.status === 'needs_review'
+                ? 'generating'
               : workflow.asset.status === 'awaiting_approval'
                 ? 'awaiting_approval'
                 : 'failed';
@@ -1346,9 +1309,9 @@ export default function BuildPage() {
                   readyPointer?.publicUrl ?? primaryVariant?.publicUrl ?? null,
                 message:
                   nextStatus === 'ready'
-                    ? 'Founder approved this visual.'
-                    : nextStatus === 'queued_for_codex'
-                      ? visualStatusCopy.queued_for_codex
+                    ? 'Visual ready.'
+                    : nextStatus === 'generating'
+                      ? visualStatusCopy.generating
                     : nextStatus === 'awaiting_approval'
                       ? visualStatusCopy.awaiting_approval
                     : workflow.userMessage ?? visualStatusCopy.failed,
@@ -1419,7 +1382,7 @@ export default function BuildPage() {
             result.variants[0]?.storagePath ??
             null,
           publicUrl: result.primarySessionPointer?.publicUrl ?? null,
-          message: 'Founder approved this visual.',
+          message: 'Visual ready.',
         });
 
         let nextSession = pendingSession;
@@ -1466,7 +1429,7 @@ export default function BuildPage() {
         : hasRunningAssets
           ? 'Designer generation'
         : hasQueuedAssets
-          ? 'Codex asset queue'
+          ? 'Provider connection'
         : hasAwaitingApproval || readyVisualCount > 0
           ? 'Asset review'
           : isBuilding
@@ -1478,7 +1441,7 @@ export default function BuildPage() {
       : hasRunningAssets
         ? 'Generating visuals'
         : hasQueuedAssets
-          ? 'Queued for Codex'
+          ? 'Provider not connected'
         : hasAwaitingApproval
           ? 'Approval required'
           : isBuilding
@@ -1547,7 +1510,7 @@ export default function BuildPage() {
     {
       name: 'Designer',
       status: hasRunningAssets || hasQueuedAssets ? 'working' : readyVisualCount > 0 || hasAwaitingApproval ? 'completed' : isBuilding ? 'pending' : 'working',
-      detail: hasRunningAssets ? 'Generating visuals' : hasQueuedAssets ? 'Queued for Codex' : readyVisualCount > 0 || hasAwaitingApproval ? 'Assets attached' : isBuilding ? 'Waiting for draft' : 'Preparing assets',
+      detail: hasRunningAssets ? 'Generating visuals' : hasQueuedAssets ? 'Provider not connected' : readyVisualCount > 0 || hasAwaitingApproval ? 'Assets attached' : isBuilding ? 'Waiting for draft' : 'Preparing assets',
     },
     {
       name: 'Reviewer',
@@ -1613,7 +1576,13 @@ export default function BuildPage() {
               <Button
                 type="button"
                 onClick={runVisualGeneration}
-                disabled={designerIsPending || hasRunningAssets || hasQueuedAssets || !activeSession?.id}
+                disabled={
+                  designerIsPending ||
+                  hasRunningAssets ||
+                  !activeSession?.id ||
+                  designerRuntimeState.imageGenerationMode !== 'runtime-provider' ||
+                  !designerRuntimeState.canGenerateInRuntime
+                }
                 className="h-12 rounded-xl bg-fuchsia-500 px-5 text-sm font-semibold text-white shadow-[0_0_24px_-11px_rgba(217,70,239,0.86)] transition-all hover:bg-fuchsia-400"
               >
                 Generate visuals
@@ -1680,9 +1649,9 @@ export default function BuildPage() {
               eyebrow="Visuals"
               title="Asset pipeline"
               value={`${readyVisualCount}/4 ready`}
-              summary="Cover, mockup, sales graphic, and social preview stay read-only until founder approval."
+              summary="Cover, mockup, sales graphic, and social preview move through runtime generation, storage, and review automatically."
               meta={[
-                hasRunningAssets ? 'Generating' : hasQueuedAssets ? 'Queued for Codex' : 'Waiting',
+                hasRunningAssets ? 'Generating' : hasQueuedAssets ? 'Provider offline' : 'Waiting',
                 `${awaitingReviewCount} in review`,
                 `${failedVisualCount} failed`,
               ]}
@@ -1808,11 +1777,6 @@ export default function BuildPage() {
             failedCount={designerRuntimeState.failedAssetCount}
             imageGenerationMode={designerRuntimeState.imageGenerationMode}
             canGenerateInRuntime={designerRuntimeState.canGenerateInRuntime}
-            onRefreshAssets={() => {
-              startDesignerTransition(async () => {
-                await refreshDesignerAssets();
-              });
-            }}
             onGenerate={runVisualGeneration}
             onFounderAction={handleFounderAction}
           />

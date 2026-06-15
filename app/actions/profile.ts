@@ -53,7 +53,7 @@ const DEFAULT_PROFILE: ProfilePreferences = {
 };
 
 const DEFAULT_SETTINGS: SettingsPreferences = {
-  workspaceName: "Sarah's Workspace",
+  workspaceName: 'My Workspace',
   defaultMarket: 'Productivity',
   defaultProductType: 'printable-pdf',
   defaultCurrency: 'usd',
@@ -111,13 +111,26 @@ function getDefaultProfilePreferences(
   };
 }
 
-function getDefaultSettingsPreferences(preferences: PreferencesEnvelope): SettingsPreferences {
+function getWorkspaceNameFallback(fullName: string) {
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return DEFAULT_SETTINGS.workspaceName;
+  }
+
+  const firstName = trimmed.split(/\s+/).filter(Boolean)[0];
+  return firstName ? `${firstName}'s Workspace` : DEFAULT_SETTINGS.workspaceName;
+}
+
+function getDefaultSettingsPreferences(
+  preferences: PreferencesEnvelope,
+  fullName: string
+): SettingsPreferences {
   const storedSettings = asObject(preferences.settings);
 
   return {
     workspaceName: getStringValue(
       storedSettings.workspaceName,
-      DEFAULT_SETTINGS.workspaceName
+      getWorkspaceNameFallback(fullName)
     ),
     defaultMarket: getStringValue(
       storedSettings.defaultMarket,
@@ -263,10 +276,11 @@ export async function loadSettings() {
 
   const rawPreferences = asObject((profile?.onboarding_preferences as Json) ?? undefined);
   const preferences = rawPreferences as PreferencesEnvelope;
+  const fullName = profile?.full_name ?? '';
 
   return {
     error: null,
-    settings: getDefaultSettingsPreferences(preferences),
+    settings: getDefaultSettingsPreferences(preferences, fullName),
   };
 }
 

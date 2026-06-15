@@ -48,7 +48,7 @@ export default function OnboardingFlow() {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         storageKey,
         JSON.stringify({
           productType: selections[1],

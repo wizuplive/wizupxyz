@@ -15,7 +15,7 @@ import type {
 } from '@/lib/designer-assets';
 import { env } from '@/lib/env';
 
-export const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
+export const DEFAULT_GOOGLE_IMAGE_MODEL = 'gemini-3-pro-image';
 export const DEFAULT_GOOGLE_FALLBACK_IMAGE_MODEL = 'gemini-3.1-flash-image';
 
 export type ImageProviderName = 'openai' | 'google';
@@ -53,6 +53,8 @@ export interface ImageProviderDebugStatus {
     | 'failed';
   hasGoogleServiceAccountKey: boolean;
   vertexCredentialSource: ReturnType<typeof getVertexCredentialDebugStatus>['credentialSource'];
+  isNanoBananaPro: boolean;
+  isImagen: boolean;
 }
 
 export interface ImageProviderResult {
@@ -100,6 +102,8 @@ export function getImageProviderDebugStatus(
     lastAssetJobStatus,
     hasGoogleServiceAccountKey: vertex.hasGoogleServiceAccountKey,
     vertexCredentialSource: vertex.credentialSource,
+    isNanoBananaPro: getConfiguredPrimaryImageModel(mode) === 'gemini-3-pro-image',
+    isImagen: false,
   };
 }
 
@@ -201,7 +205,7 @@ export async function generateImagesWithProvider(input: {
 
 function getConfiguredImageProvider(): ImageProviderName {
   const configured = env.WIZUP_IMAGE_PROVIDER?.trim().toLowerCase();
-  return configured === 'google' ? 'google' : 'openai';
+  return configured === 'openai' ? 'openai' : 'google';
 }
 
 export function getImageGenerationMode(): ImageGenerationMode {
@@ -245,7 +249,7 @@ function getConfiguredPrimaryImageModel(
     return env.WIZUP_IMAGE_DRAFT_MODEL.trim();
   }
 
-  return env.WIZUP_IMAGE_MODEL?.trim() || DEFAULT_OPENAI_IMAGE_MODEL;
+  return env.WIZUP_IMAGE_MODEL?.trim() || DEFAULT_GOOGLE_IMAGE_MODEL;
 }
 
 function getConfiguredFallbackImageModel() {
@@ -264,7 +268,11 @@ async function generateWithSingleProvider(
     return generateWithOpenAI(mode, input);
   }
 
-  return generateWithGoogle(mode, input);
+  const googleModel =
+    getConfiguredImageProvider() === 'google'
+      ? getConfiguredPrimaryImageModel(mode)
+      : getConfiguredFallbackImageModel();
+  return generateWithGoogle(mode, input, googleModel);
 }
 
 async function generateWithOpenAI(
@@ -325,13 +333,13 @@ async function generateWithGoogle(
   input: {
     context: DesignerGenerationContext;
     prompt: DesignerPromptPackage;
-  }
+  },
+  model: string
 ): Promise<ImageProviderResult> {
   if (env.GOOGLE_GENAI_USE_VERTEXAI !== 'true') {
-    throw new Error('GOOGLE_GENAI_USE_VERTEXAI=true is required for Google image fallback.');
+    throw new Error('GOOGLE_GENAI_USE_VERTEXAI=true is required for Google Gemini image generation.');
   }
 
-  const model = getConfiguredFallbackImageModel();
   let client: GoogleGenAI;
 
   try {
@@ -350,17 +358,21 @@ async function generateWithGoogle(
   const warnings: string[] = [];
   const count =
     input.context.variantCount ?? designerVariantCount();
+  const googleImageConfig = {
+    responseModalities: ['TEXT', 'IMAGE'],
+    responseFormat: {
+      image: {
+        aspectRatio: aspectRatioForDesignerAssetType(input.context.assetType),
+        imageSize: imageSizeForDesignerAssetType(input.context.assetType),
+      },
+    },
+  } as unknown as NonNullable<Parameters<GoogleGenAI['models']['generateContent']>[0]['config']>;
 
   for (let index = 0; index < count; index += 1) {
     const response = await client.models.generateContent({
       model,
       contents: buildGoogleImagePrompt(input.prompt),
-      config: {
-        responseModalities: ['IMAGE'],
-        imageConfig: {
-          aspectRatio: aspectRatioForDesignerAssetType(input.context.assetType),
-        },
-      },
+      config: googleImageConfig,
     });
 
     let inlineImageFound = false;
@@ -382,7 +394,7 @@ async function generateWithGoogle(
     }
 
     if (!inlineImageFound) {
-      throw new Error('Google image fallback returned no image bytes.');
+      throw new Error('Google Gemini image generation returned no image bytes.');
     }
   }
 
@@ -422,6 +434,18 @@ function aspectRatioForDesignerAssetType(assetType: DesignerAssetType) {
       return '16:9';
     case 'thumbnail':
       return '1:1';
+  }
+}
+
+function imageSizeForDesignerAssetType(assetType: DesignerAssetType) {
+  switch (assetType) {
+    case 'cover':
+    case 'mockup':
+    case 'sales_graphic':
+    case 'social_preview':
+      return '2K';
+    case 'thumbnail':
+      return '1K';
   }
 }
 

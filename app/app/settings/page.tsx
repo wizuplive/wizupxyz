@@ -21,7 +21,7 @@ type SettingsState = {
 };
 
 const DEFAULT_SETTINGS: SettingsState = {
-  workspaceName: "Sarah's Workspace",
+  workspaceName: 'My Workspace',
   defaultMarket: 'Productivity',
   defaultProductType: 'printable-pdf',
   defaultCurrency: 'usd',

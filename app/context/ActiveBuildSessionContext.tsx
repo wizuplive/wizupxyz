@@ -1,6 +1,11 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import type {
+  DesignerAssetType,
+  SessionPrimaryDesignerAsset,
+  SessionDesignerAssetState,
+} from '@/lib/designer-assets';
 import React, {
   createContext,
   useCallback,
@@ -12,15 +17,17 @@ import React, {
   type ReactNode,
 } from 'react';
 
-function getStorageKey(userId?: string | null) {
-  if (!userId) return null;
-  return `wizup.active-build-session:${userId}`;
+export function getActiveBuildStorageKey(userId?: string | null) {
+  return `wizup.active-build-session:${userId || 'local'}`;
 }
 
 export type BuildStage =
   | 'home'
   | 'find'
+  | 'strategy'
+  | 'build'
   | 'create'
+  | 'publish'
   | 'sell'
   | 'launch'
   | 'saved'
@@ -112,6 +119,8 @@ export interface BuildSession {
   product_draft: ProductDraft | null;
   sales_kit: SalesKit | null;
   launch_readiness: LaunchReadiness | null;
+  designer_assets?: Partial<Record<DesignerAssetType, SessionPrimaryDesignerAsset>>;
+  designer_asset_states?: Partial<Record<DesignerAssetType, SessionDesignerAssetState>>;
   next_action: string;
   updated_at: string;
 }
@@ -139,8 +148,14 @@ function createSessionId() {
 
 function nextActionForStage(stage: BuildStage) {
   switch (stage) {
+    case 'strategy':
+      return 'Turn the selected signal into a strategy.';
+    case 'build':
+      return 'Build the product from the strategy.';
     case 'create':
       return 'Shape the product draft.';
+    case 'publish':
+      return 'Prepare the publish page and launch assets.';
     case 'sell':
       return 'Write the sales kit.';
     case 'launch':
@@ -177,10 +192,93 @@ function isStructurallyEqual<T>(current: T, next: T) {
   return stableSerialize(current) === stableSerialize(next);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isBuildStage(value: unknown): value is BuildStage {
+  return (
+    value === 'home' ||
+    value === 'find' ||
+    value === 'strategy' ||
+    value === 'build' ||
+    value === 'create' ||
+    value === 'publish' ||
+    value === 'sell' ||
+    value === 'launch' ||
+    value === 'saved' ||
+    value === 'team'
+  );
+}
+
+function sanitizeDesignerAssetMap<T extends string>(value: unknown) {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  return value as Partial<Record<T, unknown>>;
+}
+
+function sanitizeBuildSession(value: unknown): BuildSession | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = typeof value.id === 'string' ? value.id : null;
+  const title = typeof value.title === 'string' ? value.title : null;
+  const currentStage = isBuildStage(value.current_stage) ? value.current_stage : null;
+  const updatedAt = typeof value.updated_at === 'string' ? value.updated_at : null;
+  const nextAction =
+    typeof value.next_action === 'string'
+      ? value.next_action
+      : currentStage
+        ? nextActionForStage(currentStage)
+        : null;
+  const status =
+    value.status === 'not_started' ||
+    value.status === 'working' ||
+    value.status === 'ready' ||
+    value.status === 'needs_review' ||
+    value.status === 'complete'
+      ? value.status
+      : 'working';
+
+  if (!id || !title || !currentStage || !updatedAt || !nextAction) {
+    return null;
+  }
+
+  return {
+    id,
+    title,
+    current_stage: currentStage,
+    status,
+    selected_idea: isRecord(value.selected_idea)
+      ? (value.selected_idea as unknown as SelectedIdea)
+      : null,
+    product_draft: isRecord(value.product_draft)
+      ? (value.product_draft as unknown as ProductDraft)
+      : null,
+    sales_kit: isRecord(value.sales_kit)
+      ? (value.sales_kit as unknown as SalesKit)
+      : null,
+    launch_readiness: isRecord(value.launch_readiness)
+      ? (value.launch_readiness as unknown as LaunchReadiness)
+      : null,
+    designer_assets: sanitizeDesignerAssetMap<DesignerAssetType>(value.designer_assets) as
+      | Partial<Record<DesignerAssetType, SessionPrimaryDesignerAsset>>
+      | undefined,
+    designer_asset_states: sanitizeDesignerAssetMap<DesignerAssetType>(
+      value.designer_asset_states
+    ) as Partial<Record<DesignerAssetType, SessionDesignerAssetState>> | undefined,
+    next_action: nextAction,
+    updated_at: updatedAt,
+  };
+}
+
 export const ActiveBuildSessionProvider = ({ children }: { children: ReactNode }) => {
   const [activeSession, setActiveSessionState] = useState<BuildSession | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
   const lastSeenUserIdRef = useRef<string | null>(null);
 
   const syncUserId = useCallback((nextUserId: string | null) => {
@@ -217,18 +315,45 @@ export const ActiveBuildSessionProvider = ({ children }: { children: ReactNode }
   }, [syncUserId]);
 
   useEffect(() => {
+    if (userId === undefined) {
+      return;
+    }
+
     if (userId === null) {
-      setActiveSessionState((prev) => (prev === null ? prev : null));
+      const key = getActiveBuildStorageKey(null);
+      if (typeof window !== 'undefined') {
+        const stored = window.localStorage.getItem(key);
+        if (stored) {
+          try {
+            const parsed = sanitizeBuildSession(JSON.parse(stored));
+            if (!parsed) {
+              window.localStorage.removeItem(key);
+              setActiveSessionState(null);
+            } else {
+              setActiveSessionState(parsed);
+            }
+          } catch {
+            window.localStorage.removeItem(key);
+            setActiveSessionState(null);
+          }
+        }
+      }
       setIsHydrated(true);
       return;
     }
     
-    const key = getStorageKey(userId);
+    const key = getActiveBuildStorageKey(userId);
     if (key && typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(key);
       if (stored) {
         try {
-          setActiveSessionState(JSON.parse(stored));
+          const parsed = sanitizeBuildSession(JSON.parse(stored));
+          if (!parsed) {
+            window.localStorage.removeItem(key);
+            setActiveSessionState(null);
+          } else {
+            setActiveSessionState(parsed);
+          }
         } catch {
           window.localStorage.removeItem(key);
           setActiveSessionState(null);
@@ -241,9 +366,8 @@ export const ActiveBuildSessionProvider = ({ children }: { children: ReactNode }
   }, [userId]);
 
   useEffect(() => {
-    if (!isHydrated || !userId) return;
-    const key = getStorageKey(userId);
-    if (!key) return;
+    if (!isHydrated || userId === undefined) return;
+    const key = getActiveBuildStorageKey(userId);
 
     if (!activeSession) {
       window.localStorage.removeItem(key);
@@ -265,13 +389,13 @@ export const ActiveBuildSessionProvider = ({ children }: { children: ReactNode }
     setActiveSessionState({
       id: createSessionId(),
       title: idea.title,
-      current_stage: 'create',
+      current_stage: 'strategy',
       status: 'working',
       selected_idea: idea,
       product_draft: null,
       sales_kit: null,
       launch_readiness: null,
-      next_action: nextActionForStage('create'),
+      next_action: nextActionForStage('strategy'),
       updated_at: nowIso(),
     });
   }, []);

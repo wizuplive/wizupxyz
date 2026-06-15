@@ -35,6 +35,10 @@ export async function GET(request: Request) {
     codexAssistedQueueEnabled: imageProvider.codexAssistedQueueEnabled,
     imageProvider: imageProvider.imageProvider,
     imageModel: imageProvider.imageModel,
+    isNanoBananaPro: imageProvider.isNanoBananaPro,
+    isImagen: imageProvider.isImagen,
+    runtimeProvider: imageProvider.imageProvider,
+    runtimeModel: imageProvider.imageModel,
     imageFallbackProvider: imageProvider.imageFallbackProvider,
     imageFallbackModel: imageProvider.imageFallbackModel,
     imageGenerationLastErrorSanitized:
@@ -44,9 +48,13 @@ export async function GET(request: Request) {
         runtimeEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
     ),
     debugSessionId: assetCounts.sessionId,
+    activeBuildSessionId: assetCounts.activeBuildSessionId,
+    activeProductTitle: assetCounts.activeProductTitle,
     queuedAssetCount: assetCounts.queuedAssetCount,
     failedAssetCount: assetCounts.failedAssetCount,
     completedAssetCount: assetCounts.completedAssetCount,
+    lastUploadedAssetSessionId: assetCounts.lastUploadedAssetSessionId,
+    lastUploadedAssetProductTitle: assetCounts.lastUploadedAssetProductTitle,
     lastImageStorageWriteStatus: imageProvider.lastImageStorageWriteStatus,
     lastAssetJobStatus: imageProvider.lastAssetJobStatus,
     hasGoogleServiceAccountKey: vertexCredentials.hasGoogleServiceAccountKey,
@@ -66,9 +74,13 @@ async function loadDesignerAssetCounts(sessionId: string | null) {
   if (!supabaseUrl || !serviceRoleKey) {
     return {
       sessionId,
+      activeBuildSessionId: sessionId,
+      activeProductTitle: null,
       queuedAssetCount: null,
       failedAssetCount: null,
       completedAssetCount: null,
+      lastUploadedAssetSessionId: null,
+      lastUploadedAssetProductTitle: null,
     };
   }
 
@@ -86,9 +98,13 @@ async function loadDesignerAssetCounts(sessionId: string | null) {
   if (error) {
     return {
       sessionId,
+      activeBuildSessionId: sessionId,
+      activeProductTitle: null,
       queuedAssetCount: null,
       failedAssetCount: null,
       completedAssetCount: null,
+      lastUploadedAssetSessionId: null,
+      lastUploadedAssetProductTitle: null,
     };
   }
 
@@ -96,6 +112,10 @@ async function loadDesignerAssetCounts(sessionId: string | null) {
   let queuedAssetCount = 0;
   let failedAssetCount = 0;
   let completedAssetCount = 0;
+  let activeBuildSessionId = sessionId;
+  let activeProductTitle = null;
+  let lastUploadedAssetSessionId = null;
+  let lastUploadedAssetProductTitle = null;
 
   for (const row of (data ?? []) as Pick<SalesAssetRow, 'id' | 'content' | 'updated_at'>[]) {
     const parsed = parseDesignerPayload(row.content);
@@ -107,16 +127,31 @@ async function loadDesignerAssetCounts(sessionId: string | null) {
     if (latestBySessionAsset.has(key)) continue;
     latestBySessionAsset.set(key, row.id);
 
+    if (!activeBuildSessionId) {
+      activeBuildSessionId = asset.sessionId;
+      activeProductTitle = asset.contextSnapshot?.productTitle ?? null;
+    }
+
     if (asset.status === 'queued_for_codex') queuedAssetCount += 1;
     if (asset.status === 'failed') failedAssetCount += 1;
     if (asset.status === 'ready') completedAssetCount += 1;
+
+    const firstVariant = Array.isArray(parsed?.variants) ? parsed.variants[0] : null;
+    if (!lastUploadedAssetSessionId && asset.status === 'ready' && firstVariant?.publicUrl) {
+      lastUploadedAssetSessionId = asset.sessionId;
+      lastUploadedAssetProductTitle = asset.contextSnapshot?.productTitle ?? null;
+    }
   }
 
   return {
     sessionId,
+    activeBuildSessionId,
+    activeProductTitle,
     queuedAssetCount,
     failedAssetCount,
     completedAssetCount,
+    lastUploadedAssetSessionId,
+    lastUploadedAssetProductTitle,
   };
 }
 
@@ -130,7 +165,13 @@ function parseDesignerPayload(content: Json) {
       sessionId?: string;
       type?: string;
       status?: string;
+      contextSnapshot?: {
+        productTitle?: string;
+      };
     };
+    variants?: Array<{
+      publicUrl?: string | null;
+    }>;
   };
 
   return candidate.asset ? candidate : null;

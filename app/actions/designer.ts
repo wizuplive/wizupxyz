@@ -1,8 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
+import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   DesignerAsset,
+  DesignerAssetContextSnapshot,
   DesignerAssetStatus,
   DesignerAssetVariant,
   DesignerGenerationContext,
@@ -10,6 +13,7 @@ import type {
   SessionPrimaryDesignerAsset,
 } from '@/lib/designer-assets';
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/types';
 import type { Json, Tables } from '@/lib/supabase/types';
 import { buildDesignerPrompt } from '@/lib/ai/designer-prompts';
 import {
@@ -99,6 +103,10 @@ export interface DesignerWorkflowActionResult {
     | 'complete';
 }
 
+type DesignerSupabaseClient =
+  | Awaited<ReturnType<typeof createClient>>
+  | SupabaseClient<Database>;
+
 export async function generateDesignerAssetSet(
   input: DesignerGenerationContext
 ): Promise<DesignerActionResult> {
@@ -131,6 +139,7 @@ export async function generateDesignerAssetSet(
     variantCount,
     createdAt: now,
     updatedAt: now,
+    contextSnapshot: buildDesignerAssetContextSnapshot(context),
   };
 
   try {
@@ -286,8 +295,39 @@ export async function generateDesignerWorkflowAsset(input: {
     canGenerateInRuntime: runtimeDebug.canGenerateInRuntime,
     codexAssistedQueueEnabled: runtimeDebug.codexAssistedQueueEnabled,
   });
-  if (runtimeDebug.imageGenerationMode === 'codex-assisted') {
-    return queueDesignerWorkflowAsset(input.context);
+  if (runtimeDebug.imageGenerationMode !== 'runtime-provider') {
+    const context = normalizeDesignerContext(input.context);
+    const now = new Date().toISOString();
+    const message = 'Image provider not connected.';
+    recordImageAssetJobStatus('failed');
+    logDesignerStage('warn', input.context.assetType, 'runtime_provider:mode_disabled', {
+      sessionId: context.sessionId,
+      imageGenerationMode: runtimeDebug.imageGenerationMode,
+    });
+    return {
+      rowId: null,
+      asset: {
+        id: createDesignerId('asset'),
+        projectId: context.projectId,
+        sessionId: context.sessionId,
+        type: context.assetType,
+        status: 'failed',
+        promptVersion: 'v1',
+        sourceModel: getDesignerModel(context.mode ?? 'production'),
+        primaryVariantId: null,
+        variantCount: 0,
+        createdAt: now,
+        updatedAt: now,
+        contextSnapshot: buildDesignerAssetContextSnapshot(context),
+        errorMessage: message,
+      },
+      variants: [],
+      review: null,
+      primarySessionPointer: null,
+      error: message,
+      userMessage: message,
+      stage: 'generation',
+    };
   }
 
   if (!canGenerateImagesInRuntime()) {
@@ -316,6 +356,7 @@ export async function generateDesignerWorkflowAsset(input: {
         variantCount: 0,
         createdAt: now,
         updatedAt: now,
+        contextSnapshot: buildDesignerAssetContextSnapshot(context),
         errorMessage: runtimeConnectionMessage,
       },
       variants: [],
@@ -327,7 +368,128 @@ export async function generateDesignerWorkflowAsset(input: {
     };
   }
 
+  const context = normalizeDesignerContext(input.context);
+  const validationError = validateDesignerContext(context);
+  if (validationError) {
+    const failed = failedAssetResult(context, validationError);
+    recordImageAssetJobStatus('failed');
+    return {
+      rowId: null,
+      asset: failed.asset,
+      variants: [],
+      review: null,
+      primarySessionPointer: null,
+      error: validationError,
+      userMessage: validationError,
+      stage: 'generation',
+    };
+  }
+
+  const projectIdResult = await resolveDesignerProjectId(context.projectId);
+  if (!projectIdResult.ok) {
+    const failed = failedAssetResult(context, projectIdResult.error);
+    recordImageAssetJobStatus('failed');
+    return {
+      rowId: null,
+      asset: failed.asset,
+      variants: [],
+      review: null,
+      primarySessionPointer: null,
+      error: projectIdResult.error,
+      userMessage: projectIdResult.error,
+      stage: 'generation',
+    };
+  }
+
+  const now = new Date().toISOString();
+  const queuedAsset: DesignerAsset = {
+    id: createDesignerId('asset'),
+    projectId: projectIdResult.projectId,
+    sessionId: context.sessionId,
+    type: context.assetType,
+    status: 'generating',
+    promptVersion: 'v1',
+    sourceModel: getDesignerModel(context.mode ?? 'production'),
+    primaryVariantId: null,
+    variantCount: designerVariantCountForAssetType(),
+    createdAt: now,
+    updatedAt: now,
+    contextSnapshot: buildDesignerAssetContextSnapshot(context),
+  };
+
+  const supabase = await createDesignerPersistenceClient();
+  try {
+    const persisted = await persistDesignerAssetMetadata(supabase, {
+      asset: queuedAsset,
+      variants: [],
+      review: null,
+    }, { skipAuth: true });
+
+    recordImageAssetJobStatus('generating');
+    logDesignerStage('info', input.context.assetType, 'runtime_job:queued', {
+      rowId: persisted.rowId,
+      sessionId: context.sessionId,
+      hasGoogleServiceAccountKey: runtimeDebug.hasGoogleServiceAccountKey,
+      vertexCredentialSource: runtimeDebug.vertexCredentialSource,
+      selectedImageModel: runtimeDebug.selectedImageModel,
+      imageGenerationProvider: runtimeDebug.imageGenerationProvider,
+    });
+
+    after(async () => {
+      await processDesignerRuntimeJob({
+        rowId: persisted.rowId,
+        context,
+        contextSummary: input.contextSummary,
+      });
+    });
+
+    return {
+      rowId: persisted.rowId,
+      asset: persisted.asset,
+      variants: persisted.variants,
+      review: null,
+      primarySessionPointer: persisted.primarySessionPointer,
+      error: null,
+      userMessage: null,
+      stage: 'generation',
+    };
+  } catch (error) {
+    const message = sanitizeDesignerError(
+      error,
+      'Designer could not queue this visual request.'
+    );
+    logDesignerStage('error', input.context.assetType, 'runtime_job:queue_failed', {
+      message,
+      status: 'failed',
+    });
+    return {
+      rowId: null,
+      asset: {
+        ...queuedAsset,
+        status: 'failed',
+        updatedAt: new Date().toISOString(),
+        errorMessage: message,
+      },
+      variants: [],
+      review: null,
+      primarySessionPointer: null,
+      error: message,
+      userMessage,
+      stage: 'generation',
+    };
+  }
+}
+
+async function processDesignerRuntimeJob(input: {
+  rowId: string;
+  context: DesignerGenerationContext;
+  contextSummary: string;
+}) {
+  const userMessage = 'Designer could not generate visuals. Try again.';
+  const runtimeDebug = getDesignerRuntimeDebugStatus(input.context.mode ?? 'production');
+
   logDesignerStage('info', input.context.assetType, 'generation:start', {
+    rowId: input.rowId,
     sessionId: input.context.sessionId,
     hasGoogleServiceAccountKey: runtimeDebug.hasGoogleServiceAccountKey,
     vertexCredentialSource: runtimeDebug.vertexCredentialSource,
@@ -338,32 +500,39 @@ export async function generateDesignerWorkflowAsset(input: {
   recordImageAssetJobStatus('generating');
   const generated = await generateDesignerAssetSet(input.context);
   if (generated.error || generated.asset.status === 'failed' || generated.variants.length === 0) {
+    const message = generated.error ?? generated.asset.errorMessage ?? userMessage;
     logDesignerStage('warn', input.context.assetType, 'generation:failed', {
-      message: generated.error ?? generated.asset.errorMessage ?? 'Unknown generation failure',
+      rowId: input.rowId,
+      message,
       hasGoogleServiceAccountKey: runtimeDebug.hasGoogleServiceAccountKey,
       vertexCredentialSource: runtimeDebug.vertexCredentialSource,
       selectedImageModel: runtimeDebug.selectedImageModel,
       imageGenerationProvider: runtimeDebug.imageGenerationProvider,
-      imageGenerationErrorType: classifyImageGenerationError(
-        generated.error ?? generated.asset.errorMessage ?? userMessage
-      ),
+      imageGenerationErrorType: classifyImageGenerationError(message),
     });
-    return {
-      rowId: null,
+
+    const supabase = await createClient();
+    await persistDesignerWorkflowFailure({
+      supabase,
+      rowId: input.rowId,
       asset: generated.asset,
       variants: generated.variants,
-      review: null,
-      primarySessionPointer: null,
-      error: generated.error ?? generated.asset.errorMessage ?? userMessage,
-      userMessage,
+      message,
       stage: 'generation',
-    };
+      review: null,
+      userMessage,
+      skipAuth: true,
+    });
+    recordImageAssetJobStatus('failed');
+    return;
   }
 
-  const supabase = await createClient();
+  const supabase = await createDesignerPersistenceClient();
   let uploadedVariants: DesignerAssetVariant[];
   try {
-    logDesignerStage('info', input.context.assetType, 'upload:start');
+    logDesignerStage('info', input.context.assetType, 'upload:start', {
+      rowId: input.rowId,
+    });
     recordImageStorageWriteStatus('not_attempted');
     uploadedVariants = await uploadDesignerVariants(supabase, {
       asset: generated.asset,
@@ -377,13 +546,15 @@ export async function generateDesignerWorkflowAsset(input: {
       'Designer asset upload failed.'
     );
     logDesignerStage('error', input.context.assetType, 'upload:failed', {
+      rowId: input.rowId,
       message,
       status: 'failed',
       storageUploadAttempted: true,
       storageUploadSucceeded: false,
     });
-    return {
-      rowId: null,
+    await persistDesignerWorkflowFailure({
+      supabase,
+      rowId: input.rowId,
       asset: {
         ...generated.asset,
         status: 'failed',
@@ -392,34 +563,39 @@ export async function generateDesignerWorkflowAsset(input: {
       },
       variants: generated.variants,
       review: null,
-      primarySessionPointer: null,
-      error: message,
+      message,
       userMessage,
       stage: 'upload',
-    };
+      skipAuth: true,
+    });
+    recordImageAssetJobStatus('failed');
+    return;
   }
 
   let persisted: PersistedDesignerAssetResult;
   try {
     logDesignerStage('info', input.context.assetType, 'metadata_persistence:start', {
+      rowId: input.rowId,
       status: generated.asset.status,
     });
-    persisted = await persistDesignerAssetMetadata(supabase, {
+    persisted = await updateDesignerAssetMetadata(supabase, input.rowId, {
       asset: generated.asset,
       variants: uploadedVariants,
       review: null,
-    });
+    }, { skipAuth: true });
   } catch (error) {
     const message = sanitizeDesignerError(
       error,
       'Designer asset metadata persistence failed.'
     );
     logDesignerStage('error', input.context.assetType, 'metadata_persistence:failed', {
+      rowId: input.rowId,
       message,
       status: 'failed',
     });
-    return {
-      rowId: null,
+    await persistDesignerWorkflowFailure({
+      supabase,
+      rowId: input.rowId,
       asset: {
         ...generated.asset,
         status: 'failed',
@@ -428,11 +604,13 @@ export async function generateDesignerWorkflowAsset(input: {
       },
       variants: uploadedVariants,
       review: null,
-      primarySessionPointer: null,
-      error: message,
+      message,
       userMessage,
       stage: 'metadata_persistence',
-    };
+      skipAuth: true,
+    });
+    recordImageAssetJobStatus('failed');
+    return;
   }
 
   let reviewed: ReviewedDesignerActionResult;
@@ -457,14 +635,17 @@ export async function generateDesignerWorkflowAsset(input: {
       message,
       status: persisted.asset.status,
     });
-    return persistDesignerWorkflowReviewFallback({
+    await persistDesignerWorkflowReviewFallback({
       supabase,
       rowId: persisted.rowId,
       asset: persisted.asset,
       variants: persisted.variants,
       userMessage,
       message,
+      skipAuth: true,
     });
+    recordImageAssetJobStatus('failed');
+    return;
   }
 
   const readyReviewed = markReviewedDesignerAssetReady(reviewed);
@@ -478,7 +659,7 @@ export async function generateDesignerWorkflowAsset(input: {
       asset: readyReviewed.asset,
       variants: readyReviewed.variants,
       review: readyReviewed.review,
-    });
+    }, { skipAuth: true });
 
     if (saved.asset.status === 'failed') {
       logDesignerStage('warn', input.context.assetType, 'reviewer_persistence:rejected', {
@@ -487,19 +668,8 @@ export async function generateDesignerWorkflowAsset(input: {
           saved.asset.errorMessage ?? 'Reviewer could not approve any image variant.',
         status: saved.asset.status,
       });
-      return {
-        rowId: saved.rowId,
-        asset: saved.asset,
-        variants: saved.variants,
-        review: saved.review,
-        primarySessionPointer: saved.primarySessionPointer,
-        error:
-          saved.asset.errorMessage ??
-          readyReviewed.error ??
-          'Reviewer could not approve any image variant.',
-        userMessage,
-        stage: 'reviewer_persistence',
-      };
+      recordImageAssetJobStatus('failed');
+      return;
     }
 
     logDesignerStage('info', input.context.assetType, 'complete', {
@@ -507,16 +677,6 @@ export async function generateDesignerWorkflowAsset(input: {
       status: saved.asset.status,
     });
     recordImageAssetJobStatus('ready');
-    return {
-      rowId: saved.rowId,
-      asset: saved.asset,
-      variants: saved.variants,
-      review: saved.review,
-      primarySessionPointer: saved.primarySessionPointer,
-      error: null,
-      userMessage: null,
-      stage: 'complete',
-    };
   } catch (error) {
     const message = sanitizeDesignerError(
       error,
@@ -527,7 +687,7 @@ export async function generateDesignerWorkflowAsset(input: {
       message,
       status: readyReviewed.asset.status,
     });
-    return persistDesignerWorkflowFailure({
+    await persistDesignerWorkflowFailure({
       supabase,
       rowId: persisted.rowId,
       asset: readyReviewed.asset,
@@ -536,7 +696,9 @@ export async function generateDesignerWorkflowAsset(input: {
       stage: 'reviewer_persistence',
       review: readyReviewed.review,
       userMessage,
+      skipAuth: true,
     });
+    recordImageAssetJobStatus('failed');
   }
 }
 
@@ -589,6 +751,7 @@ async function queueDesignerWorkflowAsset(
     variantCount: 0,
     createdAt: now,
     updatedAt: now,
+    contextSnapshot: buildDesignerAssetContextSnapshot(context),
   };
 
   const supabase = await createClient();
@@ -656,19 +819,20 @@ export async function saveReviewedDesignerAssetResult(input: {
 }
 
 async function saveReviewedDesignerAssetResultWithClient(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: DesignerSupabaseClient,
   input: {
     rowId: string;
     asset: DesignerAsset;
     variants: DesignerAssetVariant[];
     review: ReviewerSelectionResult;
-  }
+  },
+  options: { skipAuth?: boolean } = {}
 ): Promise<PersistedDesignerAssetResult> {
   const row = await updateDesignerAssetRecord(supabase, input.rowId, {
     asset: input.asset,
     variants: input.variants,
     review: input.review,
-  });
+  }, options);
 
   revalidateDesignerPaths();
 
@@ -1136,6 +1300,7 @@ function failedAssetResult(
         designerVariantCountForAssetType(),
       createdAt: now,
       updatedAt: now,
+      contextSnapshot: buildDesignerAssetContextSnapshot(input),
       errorMessage,
     },
     variants: [],
@@ -1158,25 +1323,28 @@ function designerAssetTypeValue(type: DesignerAsset['type']) {
 }
 
 async function upsertDesignerAssetRecord(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: DesignerSupabaseClient,
   input: {
     asset: DesignerAsset;
     variants: DesignerAssetVariant[];
     review: ReviewerSelectionResult | null;
-  }
+  },
+  options: { skipAuth?: boolean } = {}
 ) {
-  const auth = await getDesignerAuthContext(supabase);
-  if (!auth.ok) {
-    throw new Error(auth.error);
-  }
+  if (!options.skipAuth) {
+    const auth = await getDesignerAuthContext(supabase);
+    if (!auth.ok) {
+      throw new Error(auth.error);
+    }
 
-  const ownership = await ensureOwnedDesignerProjectId(
-    supabase,
-    auth.userId,
-    input.asset.projectId
-  );
-  if (!ownership.ok) {
-    throw new Error(ownership.error);
+    const ownership = await ensureOwnedDesignerProjectId(
+      supabase,
+      auth.userId,
+      input.asset.projectId
+    );
+    if (!ownership.ok) {
+      throw new Error(ownership.error);
+    }
   }
 
   const payload: PersistedDesignerAssetPayload = {
@@ -1205,15 +1373,16 @@ async function upsertDesignerAssetRecord(
 }
 
 async function updateDesignerAssetRecord(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: DesignerSupabaseClient,
   rowId: string,
   input: {
     asset: DesignerAsset;
     variants: DesignerAssetVariant[];
-  review: ReviewerSelectionResult | null;
-  }
+    review: ReviewerSelectionResult | null;
+  },
+  options: { skipAuth?: boolean } = {}
 ) {
-  const existing = await getDesignerAssetRecord(supabase, rowId);
+  const existing = await getDesignerAssetRecord(supabase, rowId, options);
   if (existing.project_id !== input.asset.projectId) {
     throw new Error('Designer asset project mismatch.');
   }
@@ -1246,14 +1415,10 @@ async function updateDesignerAssetRecord(
 }
 
 async function getDesignerAssetRecord(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  rowId: string
+  supabase: DesignerSupabaseClient,
+  rowId: string,
+  options: { skipAuth?: boolean } = {}
 ): Promise<Tables<'sales_assets'>> {
-  const auth = await getDesignerAuthContext(supabase);
-  if (!auth.ok) {
-    throw new Error(auth.error);
-  }
-
   const { data, error } = await supabase
     .from('sales_assets')
     .select('*')
@@ -1268,13 +1433,20 @@ async function getDesignerAssetRecord(
     throw new Error('Designer asset record could not be found.');
   }
 
-  const ownership = await ensureOwnedDesignerProjectId(
-    supabase,
-    auth.userId,
-    data.project_id
-  );
-  if (!ownership.ok) {
-    throw new Error(ownership.error);
+  if (!options.skipAuth) {
+    const auth = await getDesignerAuthContext(supabase);
+    if (!auth.ok) {
+      throw new Error(auth.error);
+    }
+
+    const ownership = await ensureOwnedDesignerProjectId(
+      supabase,
+      auth.userId,
+      data.project_id
+    );
+    if (!ownership.ok) {
+      throw new Error(ownership.error);
+    }
   }
 
   return data;
@@ -1325,7 +1497,7 @@ async function buildApprovedSessionPointer(
 }
 
 async function persistDesignerWorkflowFailure(input: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
+  supabase: DesignerSupabaseClient;
   rowId: string;
   asset: DesignerAsset;
   variants: DesignerAssetVariant[];
@@ -1333,6 +1505,7 @@ async function persistDesignerWorkflowFailure(input: {
   stage: DesignerWorkflowActionResult['stage'];
   review?: ReviewerSelectionResult | null;
   userMessage: string;
+  skipAuth?: boolean;
 }): Promise<DesignerWorkflowActionResult> {
   const failedAsset: DesignerAsset = {
     ...input.asset,
@@ -1346,7 +1519,7 @@ async function persistDesignerWorkflowFailure(input: {
       asset: failedAsset,
       variants: input.variants,
       review: input.review ?? null,
-    });
+    }, { skipAuth: input.skipAuth });
 
     return {
       rowId: row.id,
@@ -1373,22 +1546,23 @@ async function persistDesignerWorkflowFailure(input: {
 }
 
 async function persistDesignerWorkflowReviewFallback(input: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
+  supabase: DesignerSupabaseClient;
   rowId: string;
   asset: DesignerAsset;
   variants: DesignerAssetVariant[];
   message: string;
   userMessage: string;
+  skipAuth?: boolean;
 }): Promise<DesignerWorkflowActionResult> {
   const fallbackReview = createFallbackReviewerSelection(input.variants);
   const safeReview = fallbackReview;
   const safeVariants = applyReviewerSelectionToVariants(input.variants, safeReview);
   const safeAsset: DesignerAsset = {
     ...input.asset,
-    status: safeReview.primaryVariantId ? 'awaiting_approval' : 'needs_review',
+    status: 'failed',
     primaryVariantId: safeReview.primaryVariantId,
     updatedAt: new Date().toISOString(),
-    errorMessage: null,
+    errorMessage: input.message,
   };
 
   logDesignerStage('warn', input.asset.type, 'reviewer_scoring:fallback_applied', {
@@ -1403,7 +1577,7 @@ async function persistDesignerWorkflowReviewFallback(input: {
       asset: safeAsset,
       variants: safeVariants,
       review: safeReview,
-    });
+    }, { skipAuth: input.skipAuth });
 
     return {
       rowId: saved.rowId,
@@ -1480,7 +1654,7 @@ function applyReviewerSelectionToVariants(
 function markReviewedDesignerAssetReady(
   reviewed: ReviewedDesignerActionResult
 ): ReviewedDesignerActionResult {
-  if (reviewed.asset.status === 'failed' || !reviewed.asset.primaryVariantId) {
+  if (reviewed.asset.status !== 'awaiting_approval' || !reviewed.review.primaryVariantId) {
     return reviewed;
   }
 
@@ -1489,10 +1663,25 @@ function markReviewedDesignerAssetReady(
     asset: {
       ...reviewed.asset,
       status: 'ready',
-      errorMessage: null,
       updatedAt: new Date().toISOString(),
+      errorMessage: null,
     },
-    error: null,
+  };
+}
+
+function buildDesignerAssetContextSnapshot(
+  input: DesignerGenerationContext
+): DesignerAssetContextSnapshot {
+  return {
+    sessionId: input.sessionId.trim(),
+    productTitle: input.productTitle.trim(),
+    productSubtitle: input.productSubtitle.trim(),
+    targetBuyer: input.targetBuyer.trim(),
+    pricing: input.pricing.trim(),
+    brandDirection: input.brandDirection.trim(),
+    deliverables:
+      input.deliverables?.map((item) => item.trim()).filter(Boolean) ?? [],
+    localAssetDirectory: `~/Desktop/wizup-visuals/${input.sessionId.trim()}/`,
   };
 }
 
@@ -1540,14 +1729,14 @@ function mapDesignerAssetStatusToSessionState(
 function buildDesignerSessionAssetMessage(asset: DesignerAsset) {
   switch (asset.status) {
     case 'queued_for_codex':
-      return 'Visual request queued. Generate with Codex, then approve assets.';
+      return 'Image provider not connected.';
     case 'generating':
     case 'needs_review':
       return 'Designer is creating visuals...';
     case 'awaiting_approval':
       return 'Visuals waiting for approval.';
     case 'ready':
-      return 'Founder approved this visual.';
+      return 'Visual ready.';
     case 'failed':
       return asset.errorMessage?.trim() || 'Designer could not generate visuals. Try again.';
   }
@@ -1594,14 +1783,42 @@ async function uploadDesignerVariants(
 }
 
 async function persistDesignerAssetMetadata(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: DesignerSupabaseClient,
   input: {
     asset: DesignerAsset;
     variants: DesignerAssetVariant[];
     review: ReviewerSelectionResult | null;
-  }
+  },
+  options: { skipAuth?: boolean } = {}
 ): Promise<PersistedDesignerAssetResult> {
-  const row = await upsertDesignerAssetRecord(supabase, input);
+  const row = await upsertDesignerAssetRecord(supabase, input, options);
+
+  revalidateDesignerPaths();
+
+  return {
+    rowId: row.id,
+    asset: input.asset,
+    variants: input.variants,
+    review: input.review ?? null,
+    primarySessionPointer: await buildApprovedSessionPointer(
+      supabase,
+      input.asset,
+      input.variants
+    ),
+  };
+}
+
+async function updateDesignerAssetMetadata(
+  supabase: DesignerSupabaseClient,
+  rowId: string,
+  input: {
+    asset: DesignerAsset;
+    variants: DesignerAssetVariant[];
+    review: ReviewerSelectionResult | null;
+  },
+  options: { skipAuth?: boolean } = {}
+): Promise<PersistedDesignerAssetResult> {
+  const row = await updateDesignerAssetRecord(supabase, rowId, input, options);
 
   revalidateDesignerPaths();
 
@@ -1623,30 +1840,45 @@ function createFallbackReviewerSelection(
 ): ReviewerSelectionResult {
   const reviews = variants.map((variant, index) => ({
     variantId: variant.id,
-    score: 82 - index,
+    score: 0,
     scoreBreakdown: {
-      brandFit: 82 - index,
-      clarity: 80 - index,
-      premiumFeel: 81 - index,
-      textSafety: 84,
-      composition: 79 - index,
-      productRelevance: 80 - index,
+      brandFit: 0,
+      clarity: 0,
+      premiumFeel: 0,
+      textSafety: 0,
+      composition: 0,
+      productRelevance: 0,
     },
-    notes: 'Internal fallback review used because reviewer scoring failed.',
+    notes: `Reject: Visual QA fallback used for variant ${index + 1}.`,
     source: 'internal' as const,
     internalOnly: true,
   }));
-  const primary = reviews[0] ?? null;
 
   return {
-    status: primary ? 'awaiting_approval' : 'failed',
-    primaryVariantId: primary?.variantId ?? null,
+    status: 'failed',
+    primaryVariantId: null,
     reviews,
   };
 }
 
 function sanitizeDesignerError(error: unknown, fallback: string) {
   return sanitizeProviderError(error) || fallback;
+}
+
+async function createDesignerPersistenceClient(): Promise<DesignerSupabaseClient> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+  if (supabaseUrl && serviceRoleKey) {
+    return createAdminClient<Database>(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  return createClient();
 }
 
 function getRuntimeProviderConnectionMessage(

@@ -1,0 +1,523 @@
+<style>
+  .wizup-shell {
+    display: grid;
+    gap: 24px;
+  }
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 32px;
+    background:
+      radial-gradient(circle at 78% 16%, rgba(217,70,239,0.18), transparent 24%),
+      radial-gradient(circle at 56% -4%, rgba(99,102,241,0.16), transparent 30%),
+      linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025) 42%, rgba(8,8,14,0.94));
+    padding: 32px;
+    box-shadow: 0 36px 120px -82px rgba(217,70,239,0.75);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 28px;
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(244,114,182,0.14);
+    background: rgba(217,70,239,0.08);
+    color: rgba(250,232,255,0.92);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    margin: 18px 0 12px;
+    font-size: clamp(44px, 5vw, 68px);
+    line-height: 0.94;
+    letter-spacing: 0;
+  }
+  .hero-copy {
+    max-width: 640px;
+    color: rgba(255,255,255,0.62);
+    font-size: 17px;
+    line-height: 1.7;
+  }
+  .command {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px;
+  }
+  .command-input {
+    height: 64px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.28);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    color: rgba(255,255,255,0.9);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .command-cta {
+    height: 64px;
+    padding: 0 28px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(217,70,239,0.96), rgba(192,38,211,0.9));
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    box-shadow: 0 0 28px -14px rgba(217,70,239,0.9);
+  }
+  .hero-visual {
+    border-radius: 28px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)),
+      rgba(5,5,10,0.7);
+    padding: 18px;
+    min-height: 300px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .visual-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    color: rgba(255,255,255,0.5);
+    font-size: 12px;
+  }
+  .graph {
+    height: 210px;
+    border-radius: 22px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px),
+      radial-gradient(circle at 76% 18%, rgba(217,70,239,0.22), transparent 22%),
+      rgba(0,0,0,0.28);
+    background-size: 56px 56px, 56px 56px, auto, auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .graph svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .status-card,
+  .panel,
+  .opportunity {
+    border: 1px solid rgba(255,255,255,0.075);
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02) 48%, rgba(8,8,14,0.92));
+    box-shadow: 0 24px 72px -58px rgba(217,70,239,0.44);
+  }
+  .status-card {
+    padding: 18px 18px 20px;
+  }
+  .status-label {
+    color: rgba(255,255,255,0.36);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .status-value {
+    font-size: 30px;
+    color: white;
+    margin-bottom: 8px;
+  }
+  .status-detail {
+    color: rgba(255,255,255,0.52);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+  }
+  .opportunities {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .opportunity {
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .opportunity .tag {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(244,114,182,0.14);
+    background: rgba(217,70,239,0.08);
+    color: rgba(250,232,255,0.92);
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .opportunity h3 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    line-height: 1.12;
+  }
+  .opportunity p {
+    margin: 0 0 18px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.6);
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .meta div {
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    background: rgba(0,0,0,0.22);
+    padding: 12px;
+  }
+  .meta span {
+    display: block;
+    color: rgba(255,255,255,0.36);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .insight {
+    border: 1px solid rgba(244,114,182,0.12);
+    background: rgba(217,70,239,0.06);
+    border-radius: 18px;
+    padding: 12px;
+    color: rgba(255,255,255,0.58);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+  .primary,
+  .secondary,
+  .ghost {
+    height: 44px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .primary {
+    flex: 1;
+    background: rgba(217,70,239,0.95);
+    color: white;
+  }
+  .secondary,
+  .ghost {
+    width: 44px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.035);
+    color: rgba(255,255,255,0.72);
+  }
+  .rail {
+    display: grid;
+    gap: 16px;
+  }
+  .panel {
+    padding: 18px;
+  }
+  .panel h4 {
+    margin: 0 0 4px;
+    font-size: 18px;
+  }
+  .panel-sub {
+    margin: 0 0 16px;
+    color: rgba(255,255,255,0.46);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .progress-ring {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .progress-value {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(244,114,182,0.16);
+    background: rgba(0,0,0,0.28);
+    color: white;
+    font-weight: 600;
+  }
+  .steps {
+    display: grid;
+    gap: 10px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.56);
+  }
+  .step.active {
+    border-color: rgba(244,114,182,0.14);
+    background: rgba(217,70,239,0.06);
+    color: white;
+  }
+  .step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    font-size: 12px;
+  }
+  .activity {
+    display: grid;
+    gap: 10px;
+  }
+  .activity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.2);
+    border-radius: 16px;
+    padding: 11px 12px;
+  }
+  .activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.22);
+  }
+  .activity-row.live .activity-dot {
+    background: #67e8f9;
+    box-shadow: 0 0 12px rgba(103,232,249,0.7);
+  }
+  .activity-label {
+    color: white;
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  .activity-state {
+    color: rgba(255,255,255,0.42);
+    font-size: 12px;
+  }
+  .preview-box {
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.22);
+    border-radius: 18px;
+    padding: 14px;
+  }
+  .preview-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(244,114,182,0.12);
+    background: rgba(217,70,239,0.06);
+    color: rgba(250,232,255,0.84);
+    border-radius: 999px;
+    padding: 5px 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .preview-box p {
+    color: rgba(255,255,255,0.58);
+    font-size: 13px;
+    line-height: 1.55;
+    margin: 0 0 12px;
+  }
+  @media (max-width: 1024px) {
+    .hero-grid,
+    .main-grid,
+    .status-grid,
+    .opportunities {
+      grid-template-columns: 1fr;
+    }
+    .command {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="wizup-shell">
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Discover Command</div>
+        <h1>Find a product people already want.</h1>
+        <p class="hero-copy">
+          Scan real market signals, compare opportunities, and choose what to build next.
+        </p>
+        <div class="command">
+          <div class="command-input">Search niches, problems, or product ideas…</div>
+          <div class="command-cta">Scan Market</div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="visual-header">
+          <span>Signal view</span>
+          <span>Live opportunity pattern</span>
+        </div>
+        <div class="graph">
+          <svg viewBox="0 0 540 210" fill="none" preserveAspectRatio="none">
+            <path d="M0 150C38 153 62 132 98 128C132 124 164 105 202 108C236 111 254 88 290 84C326 80 344 58 382 62C414 66 450 40 486 34C507 31 523 22 540 14V210H0V150Z" fill="url(#fill)" opacity="0.9"/>
+            <path d="M0 150C38 153 62 132 98 128C132 124 164 105 202 108C236 111 254 88 290 84C326 80 344 58 382 62C414 66 450 40 486 34C507 31 523 22 540 14" stroke="#f0abfc" stroke-width="2.5"/>
+            <defs>
+              <linearGradient id="fill" x1="270" y1="14" x2="270" y2="210" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#d946ef" stop-opacity="0.28"/>
+                <stop offset="1" stop-color="#d946ef" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="status-grid">
+    <div class="status-card">
+      <div class="status-label">Scan status</div>
+      <div class="status-value">Verified</div>
+      <div class="status-detail">Scout finished a trusted market pass and surfaced real opportunities.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-label">Verified opportunities</div>
+      <div class="status-value">06</div>
+      <div class="status-detail">Only verified opportunities appear here. No filler metrics.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-label">Sources checked</div>
+      <div class="status-value">03</div>
+      <div class="status-detail">Source count is factual and tied to the current scan result.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-label">Active draft</div>
+      <div class="status-value">01</div>
+      <div class="status-detail">Honest view of whether there is an active strategy draft in progress.</div>
+    </div>
+  </section>
+
+  <section class="main-grid">
+    <div class="opportunities">
+      <div class="opportunity">
+        <div class="tag">High momentum</div>
+        <h3>Client onboarding kit for solo consultants</h3>
+        <p>Sharper hierarchy, less clutter, and a clearer primary action make the opportunity cards feel more valuable and faster to scan.</p>
+        <div class="meta">
+          <div><span>Buyer</span>Solo consultants</div>
+          <div><span>Format</span>Template pack</div>
+        </div>
+        <div class="insight">Buyer pain is specific, monetization is obvious, and the next action is unmissable.</div>
+        <div class="row">
+          <div class="primary">Add to Strategy</div>
+          <div class="secondary">◌</div>
+          <div class="ghost">≋</div>
+        </div>
+      </div>
+
+      <div class="opportunity">
+        <div class="tag">Evergreen</div>
+        <h3>Meal planning system for ADHD households</h3>
+        <p>The card grid stays spacious, but the information density is more intentional and calmer than the current dashboard-like layout.</p>
+        <div class="meta">
+          <div><span>Buyer</span>ADHD families</div>
+          <div><span>Format</span>Digital system</div>
+        </div>
+        <div class="insight">Secondary actions are still present, but the visual emphasis stays on choosing what to build next.</div>
+        <div class="row">
+          <div class="primary">Add to Strategy</div>
+          <div class="secondary">◌</div>
+          <div class="ghost">≋</div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="rail">
+      <div class="panel">
+        <h4>Build progress</h4>
+        <p class="panel-sub">A lighter, calmer right rail with clearer priority.</p>
+        <div class="progress-ring">
+          <div>
+            <div style="color:white;font-size:14px;margin-bottom:4px;">Strategy started</div>
+            <div style="color:rgba(255,255,255,0.44);font-size:12px;">Continue from the top verified signal</div>
+          </div>
+          <div class="progress-value">40%</div>
+        </div>
+        <div class="steps">
+          <div class="step active"><div class="step-dot">1</div>Discover an opportunity</div>
+          <div class="step"><div class="step-dot">2</div>Create strategy</div>
+          <div class="step"><div class="step-dot">3</div>Build product</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>AI team activity</h4>
+        <p class="panel-sub">Still useful, but visually quieter and easier to scan.</p>
+        <div class="activity">
+          <div class="activity-row live">
+            <div class="activity-dot"></div>
+            <div><div class="activity-label">Scout</div><div class="activity-state">Verified scan complete</div></div>
+          </div>
+          <div class="activity-row">
+            <div class="activity-dot"></div>
+            <div><div class="activity-label">Strategist</div><div class="activity-state">Waiting for selection</div></div>
+          </div>
+          <div class="activity-row">
+            <div class="activity-dot"></div>
+            <div><div class="activity-label">Analyst</div><div class="activity-state">3 sources checked</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>Quick preview</h4>
+        <p class="panel-sub">A more editorial, less widget-heavy summary of the selected opportunity.</p>
+        <div class="preview-box">
+          <div class="preview-pill">Verified</div>
+          <div style="color:white;font-size:16px;margin-bottom:8px;">Client onboarding kit for solo consultants</div>
+          <p>What this solves, who it’s for, and why it looks credible all become easier to understand at a glance.</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+            <div class="meta" style="grid-template-columns:1fr;margin:0;"><div><span>Buyer</span>Solo consultants</div></div>
+            <div class="meta" style="grid-template-columns:1fr;margin:0;"><div><span>Format</span>Template pack</div></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </section>
+</div>

@@ -28,6 +28,11 @@ import {
 } from '@/lib/acquisitions';
 import { createClient } from '@/lib/supabase/server';
 import type { Json, Tables } from '@/lib/supabase/types';
+import type {
+  DesignerAssetType,
+  SessionPrimaryDesignerAsset,
+} from '@/lib/designer-assets';
+import type { BuildSession } from '@/app/context/ActiveBuildSessionContext';
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type DbContext = {
@@ -265,7 +270,7 @@ export async function listSavedIdeas(): Promise<
     return fail(db.error);
   }
 
-  const result = await fetchSavedIdeas(db.supabase);
+  const result = await fetchSavedIdeas(db);
 
   if (result.error) {
     return fail(result.error);
@@ -283,7 +288,7 @@ export async function generateExamplesFromIdea(
     return fail(db.error);
   }
 
-  const ideaResult = await getIdeaById(db.supabase, ideaId);
+  const ideaResult = await getIdeaById(db, ideaId);
 
   if (ideaResult.error || !ideaResult.data) {
     return fail(ideaResult.error ?? 'The selected idea could not be found.');
@@ -365,7 +370,7 @@ export async function saveAnalystExample(
 
   const [projectId, ideaResult] = await Promise.all([
     getOrCreateProjectId(db),
-    getIdeaById(db.supabase, ideaId),
+    getIdeaById(db, ideaId),
   ]);
 
   if (projectId.error || !projectId.data) {
@@ -410,7 +415,7 @@ export async function listSavedExamples(): Promise<
     return fail(db.error);
   }
 
-  const result = await fetchSavedExamples(db.supabase);
+  const result = await fetchSavedExamples(db);
 
   if (result.error) {
     return fail(result.error);
@@ -429,8 +434,8 @@ export async function listProductSources(): Promise<
   }
 
   const [ideasResult, examplesResult] = await Promise.all([
-    fetchSavedIdeas(db.supabase),
-    fetchSavedExamples(db.supabase),
+    fetchSavedIdeas(db),
+    fetchSavedExamples(db),
   ]);
 
   if (ideasResult.error) {
@@ -478,8 +483,8 @@ export async function generateProductArchitecture(
   try {
     const input =
       source.kind === 'idea'
-        ? await strategistInputFromIdea(db.supabase, source.id)
-        : await strategistInputFromExample(db.supabase, source.id);
+        ? await strategistInputFromIdea(db, source.id)
+        : await strategistInputFromExample(db, source.id);
 
     if (input.error || !input.data) {
       return fail(input.error ?? 'Could not build a Strategist input.');
@@ -549,7 +554,7 @@ export async function listSavedProducts(): Promise<
     return fail(db.error);
   }
 
-  const result = await fetchSavedProducts(db.supabase);
+  const result = await fetchSavedProducts(db);
 
   if (result.error) {
     return fail(result.error);
@@ -568,7 +573,7 @@ export async function generateSalesKit(
     return fail(db.error);
   }
 
-  const productResult = await getProductById(db.supabase, productId);
+  const productResult = await getProductById(db, productId);
 
   if (productResult.error || !productResult.data) {
     return fail(
@@ -656,7 +661,7 @@ export async function listSavedSalesAssets(): Promise<
     return fail(db.error);
   }
 
-  const result = await fetchSavedSalesAssets(db.supabase);
+  const result = await fetchSavedSalesAssets(db);
 
   if (result.error) {
     return fail(result.error);
@@ -674,7 +679,7 @@ export async function reviewStoreReadiness(
     return fail(db.error);
   }
 
-  const inputResult = await reviewerInputFromRequest(db.supabase, request);
+  const inputResult = await reviewerInputFromRequest(db, request);
 
   if (inputResult.error || !inputResult.data) {
     return fail(inputResult.error ?? 'Could not build a Reviewer input.');
@@ -794,12 +799,37 @@ async function getOrCreateProjectId(
   return ok(created.id);
 }
 
+async function fetchOwnedProjectIds(
+  db: DbContext
+): Promise<WorkflowActionResult<string[]>> {
+  const { data, error } = await db.supabase
+    .from('projects')
+    .select('id')
+    .eq('user_id', db.userId);
+
+  if (error) {
+    return fail(error.message);
+  }
+
+  return ok((data ?? []).map((project) => project.id));
+}
+
 async function fetchSavedIdeas(
-  supabase: SupabaseServerClient
+  db: DbContext
 ): Promise<WorkflowActionResult<SavedIdea[]>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return ok([]);
+  }
+
+  const { data, error } = await db.supabase
     .from('ideas')
     .select('*')
+    .in('project_id', projectIds.data)
     .order('updated_at', { ascending: false })
     .limit(50);
 
@@ -811,11 +841,21 @@ async function fetchSavedIdeas(
 }
 
 async function fetchSavedExamples(
-  supabase: SupabaseServerClient
+  db: DbContext
 ): Promise<WorkflowActionResult<SavedExample[]>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return ok([]);
+  }
+
+  const { data, error } = await db.supabase
     .from('examples')
     .select('*')
+    .in('project_id', projectIds.data)
     .order('updated_at', { ascending: false })
     .limit(50);
 
@@ -827,11 +867,21 @@ async function fetchSavedExamples(
 }
 
 async function fetchSavedProducts(
-  supabase: SupabaseServerClient
+  db: DbContext
 ): Promise<WorkflowActionResult<SavedProduct[]>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return ok([]);
+  }
+
+  const { data, error } = await db.supabase
     .from('products')
     .select('*')
+    .in('project_id', projectIds.data)
     .order('updated_at', { ascending: false })
     .limit(50);
 
@@ -843,11 +893,21 @@ async function fetchSavedProducts(
 }
 
 async function fetchSavedSalesAssets(
-  supabase: SupabaseServerClient
+  db: DbContext
 ): Promise<WorkflowActionResult<SavedSalesAsset[]>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return ok([]);
+  }
+
+  const { data, error } = await db.supabase
     .from('sales_assets')
     .select('*')
+    .in('project_id', projectIds.data)
     .order('updated_at', { ascending: false })
     .limit(50);
 
@@ -859,13 +919,23 @@ async function fetchSavedSalesAssets(
 }
 
 async function getIdeaById(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   ideaId: string
 ): Promise<WorkflowActionResult<Tables<'ideas'>>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return fail('The selected idea could not be found.');
+  }
+
+  const { data, error } = await db.supabase
     .from('ideas')
     .select('*')
     .eq('id', ideaId)
+    .in('project_id', projectIds.data)
     .maybeSingle();
 
   if (error) {
@@ -880,13 +950,23 @@ async function getIdeaById(
 }
 
 async function getExampleById(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   exampleId: string
 ): Promise<WorkflowActionResult<Tables<'examples'>>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return fail('The selected example could not be found.');
+  }
+
+  const { data, error } = await db.supabase
     .from('examples')
     .select('*')
     .eq('id', exampleId)
+    .in('project_id', projectIds.data)
     .maybeSingle();
 
   if (error) {
@@ -901,13 +981,23 @@ async function getExampleById(
 }
 
 async function getProductById(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   productId: string
 ): Promise<WorkflowActionResult<Tables<'products'>>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return fail('The selected product could not be found.');
+  }
+
+  const { data, error } = await db.supabase
     .from('products')
     .select('*')
     .eq('id', productId)
+    .in('project_id', projectIds.data)
     .maybeSingle();
 
   if (error) {
@@ -922,13 +1012,23 @@ async function getProductById(
 }
 
 async function getSalesAssetById(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   assetId: string
 ): Promise<WorkflowActionResult<Tables<'sales_assets'>>> {
-  const { data, error } = await supabase
+  const projectIds = await fetchOwnedProjectIds(db);
+  if (projectIds.error) {
+    return fail(projectIds.error);
+  }
+
+  if (!projectIds.data?.length) {
+    return fail('The selected sales asset could not be found.');
+  }
+
+  const { data, error } = await db.supabase
     .from('sales_assets')
     .select('*')
     .eq('id', assetId)
+    .in('project_id', projectIds.data)
     .maybeSingle();
 
   if (error) {
@@ -943,10 +1043,10 @@ async function getSalesAssetById(
 }
 
 async function strategistInputFromIdea(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   ideaId: string
 ): Promise<WorkflowActionResult<StrategistInput>> {
-  const ideaResult = await getIdeaById(supabase, ideaId);
+  const ideaResult = await getIdeaById(db, ideaId);
 
   if (ideaResult.error || !ideaResult.data) {
     return fail(ideaResult.error ?? 'The selected idea could not be found.');
@@ -973,10 +1073,10 @@ async function strategistInputFromIdea(
 }
 
 async function strategistInputFromExample(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   exampleId: string
 ): Promise<WorkflowActionResult<StrategistInput>> {
-  const exampleResult = await getExampleById(supabase, exampleId);
+  const exampleResult = await getExampleById(db, exampleId);
 
   if (exampleResult.error || !exampleResult.data) {
     return fail(
@@ -1020,14 +1120,14 @@ async function strategistInputFromExample(
 }
 
 async function reviewerInputFromRequest(
-  supabase: SupabaseServerClient,
+  db: DbContext,
   request: StoreReviewRequest
 ): Promise<WorkflowActionResult<ReviewerInput>> {
   let product: StrategistProductOutlineOutput | null = null;
   let assets: CreatorAssetsOutput | null = null;
 
   if (request.productId) {
-    const productResult = await getProductById(supabase, request.productId);
+    const productResult = await getProductById(db, request.productId);
 
     if (productResult.error || !productResult.data) {
       return fail(
@@ -1039,10 +1139,7 @@ async function reviewerInputFromRequest(
   }
 
   if (request.salesAssetId) {
-    const assetResult = await getSalesAssetById(
-      supabase,
-      request.salesAssetId
-    );
+    const assetResult = await getSalesAssetById(db, request.salesAssetId);
 
     if (assetResult.error || !assetResult.data) {
       return fail(
@@ -1228,6 +1325,21 @@ function parseLines(value: string | undefined) {
 
 function revalidateWorkflowPaths() {
   WORKFLOW_PATHS.forEach((path) => revalidatePath(path));
+}
+
+export async function attachApprovedDesignerAssetToSession(
+  session: BuildSession,
+  assetType: DesignerAssetType,
+  pointer: SessionPrimaryDesignerAsset
+): Promise<BuildSession> {
+  return {
+    ...session,
+    designer_assets: {
+      ...(session.designer_assets ?? {}),
+      [assetType]: pointer,
+    },
+    updated_at: new Date().toISOString(),
+  };
 }
 
 function researchNotesFromAcquisition(acquisition: MarketAcquisitionResult) {

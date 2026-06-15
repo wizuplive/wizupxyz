@@ -19,7 +19,7 @@ export function OnboardingSync() {
 
     hasAttempted.current = true;
 
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return;
     }
@@ -29,7 +29,7 @@ export function OnboardingSync() {
     try {
       parsed = JSON.parse(raw) as OnboardingAnswers;
     } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.removeItem(STORAGE_KEY);
       return;
     }
 
@@ -45,7 +45,7 @@ export function OnboardingSync() {
 
     void persistOnboardingAnswers(parsed).then((result) => {
       if (!result.error) {
-        window.localStorage.removeItem(STORAGE_KEY);
+        window.sessionStorage.removeItem(STORAGE_KEY);
       }
     });
   }, []);

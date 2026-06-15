@@ -44,8 +44,12 @@ const DEFAULT_NEGATIVE_PROMPT = [
   'no clutter',
   'no fake UI chrome',
   'no unreadable text',
+  'no readable long text',
   'no gibberish typography',
   'no low quality render',
+  'no co-parenting themes unless the product is actually about co-parenting',
+  'no anxiety relief themes unless the product is actually about anxiety relief',
+  'no kids or blended family themes unless the product is actually about those topics',
 ].join(', ');
 
 export function buildDesignerPrompt(
@@ -71,12 +75,18 @@ export function buildDesignerPrompt(
     `Problem summary: ${input.problemSummary}`,
     `Differentiator: ${input.differentiator}`,
     `Price point: ${input.pricing}`,
+    `Deliverables: ${(input.deliverables ?? []).join(', ') || 'Digital product assets only'}`,
     `Brand direction: ${input.brandDirection}`,
     `Composition guidance: ${rules.framing}`,
     sourceContext ? `Supporting context:\n${sourceContext}` : '',
     input.referenceStyleNotes ? `Style notes: ${input.referenceStyleNotes}` : '',
     input.formatConstraints ? `Format constraints: ${input.formatConstraints}` : '',
     'Use premium dark-mode product aesthetics. Keep the result believable, calm, modern, and product-relevant.',
+    'Render abstract product visuals, device mockups, cards, worksheets, notebooks, clean UI panels, and composition layouts.',
+    'Do not include readable text except simple generic labels.',
+    'Do not bake the product title, subtitle, price, CTA, or module names into the image.',
+    'Do not use any previous product names.',
+    `Do not mention co-parenting, anxiety relief, kids, blended families, or transition planner unless the current product "${input.productTitle}" is actually about those topics.`,
   ]
     .filter(Boolean)
     .join('\n');

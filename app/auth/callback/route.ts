@@ -1,6 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 
+import { getRequestOrigin } from '@/lib/auth/request-origin';
+
 function getSafeRedirectPath(nextPath: string | null) {
   if (!nextPath || !nextPath.startsWith('/') || nextPath.startsWith('//')) {
     return '/app';
@@ -10,7 +12,8 @@ function getSafeRedirectPath(nextPath: string | null) {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getRequestOrigin(request);
   const code = searchParams.get('code');
   const next = getSafeRedirectPath(searchParams.get('next'));
 

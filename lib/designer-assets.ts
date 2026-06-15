@@ -62,7 +62,19 @@ export interface DesignerAsset {
   variantCount: number;
   createdAt: string;
   updatedAt: string;
+  contextSnapshot?: DesignerAssetContextSnapshot;
   errorMessage?: string | null;
+}
+
+export interface DesignerAssetContextSnapshot {
+  sessionId: string;
+  productTitle: string;
+  productSubtitle: string;
+  targetBuyer: string;
+  pricing: string;
+  brandDirection: string;
+  deliverables: string[];
+  localAssetDirectory: string;
 }
 
 export interface SessionPrimaryDesignerAsset {
@@ -98,6 +110,7 @@ export interface DesignerGenerationContext {
   differentiator: string;
   pricing: string;
   brandDirection: string;
+  deliverables?: string[];
   variantCount?: number;
   mode?: 'production' | 'draft';
   sourceContext?: {

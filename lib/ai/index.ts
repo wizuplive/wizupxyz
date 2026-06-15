@@ -1,25 +1,12 @@
 import 'server-only';
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { loadEnvConfig } from '@next/env';
-loadEnvConfig(process.cwd());
-
 import { GoogleGenAI } from '@google/genai';
-
-function runtimeEnv(name: string) {
-  const live = process.env[name]?.trim();
-  if (live) return live;
-
-  const envPath = path.join(process.cwd(), '.env.local');
-  if (!fs.existsSync(envPath)) return '';
-
-  const line = fs.readFileSync(envPath, 'utf8')
-    .split(/\r?\n/)
-    .find((entry) => entry.trim().startsWith(name + '='));
-
-  return line ? line.slice(name.length + 1).trim().replace(/^['"]|['"]$/g, '') : '';
-}
+import {
+  buildVertexGoogleGenAIOptions,
+  getVertexGoogleAuthConfig,
+  logVertexAuthFailure,
+  runtimeEnv,
+} from '@/lib/ai/google-auth';
 
 export type AIServiceLabel =
   | 'Scout'
@@ -238,6 +225,14 @@ export interface ReviewerStoreReadinessOutput
   };
 }
 
+export interface AIProviderConfigStatus {
+  configured: boolean;
+  mode: 'vertex' | 'api-key' | 'none';
+  missing: string[];
+  reason?: string;
+  credentialSource?: 'env-json' | 'env-path' | 'adc';
+}
+
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 const WIZUP_SYSTEM_INSTRUCTION = [
@@ -262,6 +257,46 @@ interface GenerateStructuredOptions<TOutput extends AIResultMetadata> {
   maxOutputTokens?: number;
 }
 
+export function getAIProviderConfigStatus(): AIProviderConfigStatus {
+  const useVertex = runtimeEnv('GOOGLE_GENAI_USE_VERTEXAI') === 'true';
+  const vertexAuth = getVertexGoogleAuthConfig();
+  const project = runtimeEnv('GOOGLE_CLOUD_PROJECT') || vertexAuth.projectIdHint || '';
+  const apiKey = (runtimeEnv('GEMINI_API_KEY') || runtimeEnv('GOOGLE_API_KEY')).trim();
+
+  if (useVertex) {
+    const missing = project ? [] : ['GOOGLE_CLOUD_PROJECT'];
+
+    return {
+      configured: missing.length === 0,
+      mode: 'vertex',
+      missing,
+      credentialSource: vertexAuth.credentialSource,
+      reason:
+        missing.length > 0
+          ? `Vertex AI is enabled, but ${missing.join(', ')} is missing.`
+          : undefined,
+    };
+  }
+
+  if (apiKey) {
+    return {
+      configured: true,
+      mode: 'api-key',
+      missing: [],
+    };
+  }
+
+  return {
+    configured: false,
+    mode: 'none',
+    missing: ['GOOGLE_GENAI_USE_VERTEXAI', 'GEMINI_API_KEY', 'GOOGLE_API_KEY'],
+    reason:
+      'AI provider not configured. Set GOOGLE_GENAI_USE_VERTEXAI=true with GOOGLE_CLOUD_PROJECT, or set GEMINI_API_KEY / GOOGLE_API_KEY.',
+  };
+}
+
+const STRUCTURED_OUTPUT_MAX_ATTEMPTS = 2;
+
 export async function generateScoutIdeas(
   input: ScoutInput = {}
 ): Promise<ScoutIdeasOutput> {
@@ -274,8 +309,8 @@ export async function generateScoutIdeas(
     ].join('\n'),
     responseJsonSchema: scoutIdeasSchema,
     fallback: mockScoutIdeas,
-    temperature: 0.8,
-    maxOutputTokens: 3200,
+    temperature: 0.7,
+    maxOutputTokens: 2400,
   });
 }
 
@@ -351,17 +386,20 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
   options: GenerateStructuredOptions<TOutput>
 ): Promise<TOutput> {
   const model = getGeminiModel();
-  const useVertex = runtimeEnv('GOOGLE_GENAI_USE_VERTEXAI') === 'true';
+  const configStatus = getAIProviderConfigStatus();
+  const useVertex = configStatus.mode === 'vertex';
   const apiKey = (runtimeEnv('GEMINI_API_KEY') || runtimeEnv('GOOGLE_API_KEY')).trim();
 
-  if (!useVertex && !apiKey) {
-    console.warn('[AI] Fallback triggered: Missing Vertex AI or API key.');
+  if (!configStatus.configured) {
+    console.warn(
+      `[AI] Fallback triggered: ${configStatus.reason ?? 'Provider configuration is incomplete.'}`
+    );
     return options.fallback(
       createMetadata(
         options.role,
         'mock',
         model,
-        'AI provider not configured (missing Vertex AI or API key).'
+        configStatus.reason ?? 'AI provider not configured.'
       )
     );
   }
@@ -369,44 +407,62 @@ async function generateStructuredOutput<TOutput extends AIResultMetadata>(
   try {
     let ai: GoogleGenAI;
     if (useVertex) {
-      const project = runtimeEnv('GOOGLE_CLOUD_PROJECT');
-      const location = runtimeEnv('GOOGLE_CLOUD_LOCATION') || 'global';
-      if (!project) {
-        throw new Error('GOOGLE_CLOUD_PROJECT is required for Vertex AI.');
-      }
-      ai = new GoogleGenAI({ vertexai: true, project, location });
+      ai = new GoogleGenAI(buildVertexGoogleGenAIOptions());
     } else {
       ai = new GoogleGenAI({ apiKey });
     }
-    const response = await ai.models.generateContent({
-      model,
-      contents: options.prompt,
-      config: {
-        systemInstruction: WIZUP_SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        responseJsonSchema: options.responseJsonSchema,
-        temperature: options.temperature,
-        maxOutputTokens: options.maxOutputTokens,
-      },
-    });
 
-    const text = response.text;
+    let lastError: unknown;
 
-    if (!text) {
-      throw new Error('Gemini returned an empty response.');
+    for (let attempt = 1; attempt <= STRUCTURED_OUTPUT_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: options.prompt,
+          config: {
+            systemInstruction: WIZUP_SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseJsonSchema: options.responseJsonSchema,
+            temperature: options.temperature,
+            maxOutputTokens: options.maxOutputTokens,
+          },
+        });
+
+        const text = response.text;
+
+        if (!text?.trim()) {
+          throw new Error('Gemini returned an empty response.');
+        }
+
+        const parsed = parseStructuredResponse<OutputWithoutMetadata<TOutput>>(
+          text
+        );
+
+        return {
+          ...parsed,
+          ...createMetadata(options.role, 'gemini', model),
+        } as TOutput;
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < STRUCTURED_OUTPUT_MAX_ATTEMPTS && shouldRetryStructuredOutput(error)) {
+          console.warn(
+            `[AI] Structured output retry ${attempt}/${STRUCTURED_OUTPUT_MAX_ATTEMPTS - 1} for ${options.role}: ${sanitizeAIError(error)}`
+          );
+          continue;
+        }
+
+        throw error;
+      }
     }
 
-    const parsed = parseStructuredResponse<OutputWithoutMetadata<TOutput>>(
-      text
-    );
-
-    return {
-      ...parsed,
-      ...createMetadata(options.role, 'gemini', model),
-    } as TOutput;
+    throw lastError instanceof Error ? lastError : new Error('Gemini API call failed.');
   } catch (error) {
     const fallbackReason =
       error instanceof Error ? error.message : 'Gemini API call failed.';
+    if (useVertex) {
+      logVertexAuthFailure(`ai:${options.role}`, sanitizeAIError(error));
+    }
 
     return options.fallback(
       createMetadata(options.role, 'mock', model, fallbackReason)
@@ -438,7 +494,19 @@ function serializeInput(input: unknown) {
 }
 
 function parseStructuredResponse<TOutput>(text: string): TOutput {
-  return JSON.parse(stripJsonCodeFence(text)) as TOutput;
+  const cleaned = stripJsonCodeFence(text);
+
+  try {
+    return JSON.parse(cleaned) as TOutput;
+  } catch (error) {
+    const extracted = extractJsonPayload(cleaned);
+
+    if (extracted && extracted !== cleaned) {
+      return JSON.parse(extracted) as TOutput;
+    }
+
+    throw error;
+  }
 }
 
 function stripJsonCodeFence(text: string) {
@@ -446,6 +514,42 @@ function stripJsonCodeFence(text: string) {
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '');
+}
+
+function extractJsonPayload(text: string) {
+  const objectStart = text.indexOf('{');
+  const objectEnd = text.lastIndexOf('}');
+
+  if (objectStart !== -1 && objectEnd > objectStart) {
+    return text.slice(objectStart, objectEnd + 1);
+  }
+
+  const arrayStart = text.indexOf('[');
+  const arrayEnd = text.lastIndexOf(']');
+
+  if (arrayStart !== -1 && arrayEnd > arrayStart) {
+    return text.slice(arrayStart, arrayEnd + 1);
+  }
+
+  return null;
+}
+
+function shouldRetryStructuredOutput(error: unknown) {
+  const message = sanitizeAIError(error).toLowerCase();
+
+  return (
+    message.includes('empty response') ||
+    message.includes('unexpected end of json input') ||
+    message.includes('unexpected non-whitespace character') ||
+    message.includes('json')
+  );
+}
+
+function sanitizeAIError(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Gemini API call failed.';
+
+  return message.replace(/\s+/g, ' ').trim().slice(0, 240);
 }
 
 const stringArraySchema = {

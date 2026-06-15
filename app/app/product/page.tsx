@@ -142,12 +142,14 @@ export default function ProductPage() {
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full border-white/10 text-white hover:bg-white/5 sm:w-auto"
+              disabled
+              className="h-11 w-full border-white/10 text-white/40 hover:bg-transparent sm:w-auto"
             >
               <Download className="h-4 w-4" />
               Export
             </Button>
           </div>
+          <p className="mb-6 text-xs text-white/42 lg:mb-8">Export stays disabled until export is implemented.</p>
 
           {!isLoading && sources.length === 0 ? (
             <Card className="mb-5 flex flex-col items-center justify-center border-white/5 bg-card p-8 text-center sm:p-10">

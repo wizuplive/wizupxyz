@@ -7,6 +7,7 @@ const publicRoutes = [
   '/faq',
   '/how-it-works',
   '/onboarding',
+  '/preview/discover-v7',
 ] as const;
 
 const protectedRoutes = [
